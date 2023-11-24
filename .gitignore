@@ -2,6 +2,9 @@
 .Rhistory
 .Rapp.history
 
+# for backup markdown files
+.backup
+
 # Session Data files
 .RData
 .RDataTmp
