@@ -8,6 +8,9 @@ library(lubridate)
 library(skimr)
 library(DataExplorer)
 
+#Get working directory correct
+setwd("C:/Users/sunpn1013/Desktop/Data Science Kurs/SalesForecastingBakery/0_DataPreparation")
+
 # Read "umsatzdaten_gekuerzt.csv" into a tibble called "sales_data"
 sales_data <- read_csv("umsatzdaten_gekuerzt.csv")
 
@@ -68,4 +71,17 @@ schleswig_holstein_holidays <- as.Date(c(
 combined_data <- combined_data %>%
   mutate(IsHoliday = ymd(Datum) %in% schleswig_holstein_holidays)
 
+
+# Read a .csv with schulferien
+
+holiday_data <- read_csv(file_path, show_col_types = FALSE) %>%
+  as_tibble()
+
+#Rename Variables
+holiday_data <- holiday_data %>%
+  rename(Datum = Date, IsFerien = IsHoliday)
+
+# Join the holiday_data to combined_data
+combined_data <- combined_data %>%
+  left_join(holiday_data, by = "Datum")
 
