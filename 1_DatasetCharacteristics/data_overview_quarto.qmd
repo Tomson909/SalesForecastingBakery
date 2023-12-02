@@ -1,0 +1,46 @@
+---
+title: "Data Overview"
+format: 
+ html: 
+    toc: true
+    toc-location: left
+    number-sections: true
+    smooth-scroll: true
+    keep_qmd: true
+    echo: false
+    warning: false
+    message: false
+editor: visual
+date: today
+theme: cosmo
+---
+
+
+```{r}
+
+# Basic structure
+str(combined_data)
+
+# Summary statistics
+summary(combined_data)
+
+# First few rows
+head(combined_data)
+
+```
+
+
+```{r Missing Values}
+
+# Count of missing values in each column
+colSums(is.na(combined_data))
+
+```
+
+```{r Feature Distributions}
+
+create_report(combined_data)
+
+
+```
+

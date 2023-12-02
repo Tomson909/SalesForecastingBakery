@@ -13,8 +13,7 @@ library(DataExplorer)
 ##Get working directory correct
 setwd("C:/Users/sunpn1013/Desktop/Data Science Kurs/SalesForecastingBakery/0_DataPreparation")
 
-# Data Import and Creating Rekevant Variables
-
+# Data Import and Creating Relevant Variables
 # Read relevant data
 sales_data <- read_csv("umsatzdaten_gekuerzt.csv")
 weather_data <- read_csv("wetter.csv")
@@ -71,14 +70,37 @@ combined_data <- combined_data %>%
     Wochentag = weekdays(Datum, abbreviate = FALSE)
   )
 
+# Create Regenvariable
+# Funktion, um zu prüfen, ob ein Wettercode Regen darstellt
+ist_regen <- function(code) {
+  return(code >= 50 & code <= 69 | code >= 80 & code <= 82 | code >= 91 & code <= 92 | code %in% c(95, 97))
+}
+
+combined_data <- combined_data %>%
+  mutate(IsRegen = sapply(Wettercode, ist_regen))
+
+# Neue Kategorie "Wolkenlos" erstellen
+combined_data <- combined_data %>%
+  mutate(Wolkenlos = Bewoelkung >= 0 & Bewoelkung <= 2)
+
 
 # Kieler Woche as Logical Vector
 combined_data <- combined_data %>%
   mutate(KielerWoche = if_else(is.na(KielerWoche), FALSE, KielerWoche == 1))
 
+# Create Trainingsdatensatz vom 01.07.2013 bis 31.07.2017
+train_data <- combined_data %>%
+  filter(Datum >= as.Date("2013-07-01") & Datum <= as.Date("2017-07-31"))
+
+# Create Validierungsdatensatz vom 01.08.2017 bis 31.07.2018
+validation_data <- combined_data %>%
+  filter(Datum >= as.Date("2017-08-01") & Datum <= as.Date("2018-07-31"))
+
+
+
 # Fit the baseline model
 
 
-baseline_model <- lm(Umsatz ~  Wochentag + Produktname + Temperatur + IsFerien + IsFeiertag + KielerWoche, data = combined_data)
+baseline_model <- lm(Umsatz ~  Wochentag + Produktname + Temperatur + IsFerien + IsFeiertag + KielerWoche + Bewoelkung, data = train_data)
 
 summary(baseline_model)
