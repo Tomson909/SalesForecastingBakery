@@ -51,53 +51,41 @@ dataset <- dataset %>%
 # add weather description
 # creating a column "Niederchlag" and dividing the data into Niederschlag types, woher kommt dieses Wissen?
 dataset <- dataset %>%
-  mutate(Niederschlag = case_when(
-    Wettercode >= 50 & Wettercode < 59 ~ "Sprühregen",
-    Wettercode >= 60 & Wettercode < 69 ~ "Regen",
-    Wettercode >= 70 & Wettercode <= 79 ~ "Schnee",
-    Wettercode >= 80 & Wettercode <= 89 ~ "Schauer",
-    Wettercode >= 90 & Wettercode <= 99 ~ "Gewitter",
+  mutate(Wettererscheinung = case_when(
+    between(Wettercode, 0, 3) ~ "Bewölkungsentwicklung",
+    between(Wettercode, 4, 8) ~ "Staub und Wirbel",
+    between(Wettercode, 9, 19) ~ "Sturm und Tromben",
+    between(Wettercode, 20, 29) ~ "Nebel und Sicht",
+    between(Wettercode, 30, 35) ~ "Sandsturm",
+    between(Wettercode, 36, 47) ~ "Niederschlag beendet",
+    between(Wettercode, 48, 49) ~ "Nebel mit Reifbildung",
+    between(Wettercode, 50, 59) ~ "Sprühregen",
+    between(Wettercode, 60, 69) ~ "Regen",
+    between(Wettercode, 70, 79) ~ "Schnee",
+    between(Wettercode, 80, 99) ~ "Gewitter",
     TRUE ~ NA_character_
   ))
 
-# Define the proportions for training, validation, and test sets
-train_prop <- 0.6
-val_prop <- 0.2
-test_prop <- 0.2
+# also comfortably with IsNiederschlag
+dataset <- dataset %>% mutate(IsNiederschlag = case_when(between(Wettercode, 50,99) ~ 1,
+                                                         between(Wettercode, 0,49) ~ 0,))
 
-set.seed(123)
+#rename column
+dataset <- dataset %>% rename(IsKielerWoche = KielerWoche)
 
-# Create an index for splitting the dataset
-index_train <- createDataPartition(y = dataset$Umsatz, p = train_prop, list = FALSE)
-
-# Split the dataset into training set
-train_data <- dataset[index_train, ]
-
-# Calculate the remaining proportions after the training set
-remaining_prop <- 1 - train_prop
-val_test_prop <- val_prop / remaining_prop
-
-# Create a vector of indices for random splitting
-indices <- sample(1:nrow(dataset), size = nrow(dataset))
-
-# Calculate the number of rows for each set
-num_train <- round(train_prop * nrow(dataset))
-num_val <- round(val_prop * nrow(dataset))
-num_test <- nrow(dataset) - num_train - num_val
-
-# Split the dataset using the calculated indices
-train_data <- dataset[indices[1:num_train], ]
-validation_data <- dataset[indices[(num_train + 1):(num_train + num_val)], ]
-test_data <- dataset[indices[(num_train + num_val + 1):(num_train + num_val + num_test)], ]
-
-# Print the dimensions of the resulting sets
-cat("Train set dimensions:", dim(train_data), "\n")
-cat("Validation set dimensions:", dim(validation_data), "\n")
-cat("Test set dimensions:", dim(test_data), "\n")
+# create train data and test data
+train_date_1 <- as.Date("01.07.2013", format = "%d.%m.%Y")
+train_date_2 <- as.Date("31.07.2017", format = "%d.%m.%Y")
+test_date_1 <- as.Date("01.08.2017", format = "%d.%m.%Y")
+test_date_2 <- as.Date("31.07.2018", format = "%d.%m.%Y")
 
 
-# Save the sets to CSV files
+train_data <- dataset %>%
+  filter(Datum >= train_date_1 & Datum <= train_date_2)
+test_data <- dataset %>%
+  filter(Datum >= test_date_1 & Datum <= test_date_2)
+
+# write data to csv
 write_csv(train_data, "train_data.csv")
-write_csv(validation_data, "validation_data.csv")
 write_csv(test_data, "test_data.csv")
 
