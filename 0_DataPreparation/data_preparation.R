@@ -92,15 +92,18 @@ combined_data <- combined_data %>%
 train_data <- combined_data %>%
   filter(Datum >= as.Date("2013-07-01") & Datum <= as.Date("2017-07-31"))
 
+# Specifying the file path
+write.csv(train_data, "C:/myfolder/mydata/train_data.csv", row.names = FALSE)
+
+# Save the dataframe to a specific directory
+write.csv(train_data, "C:/Users/sunpn1013/Desktop/Data Science Kurs/SalesForecastingBakery/2_BaselineModel/train_data.csv", row.names = FALSE)
+
+
+
 # Create Validierungsdatensatz vom 01.08.2017 bis 31.07.2018
 validation_data <- combined_data %>%
   filter(Datum >= as.Date("2017-08-01") & Datum <= as.Date("2018-07-31"))
 
 
 
-# Fit the baseline model
 
-
-baseline_model <- lm(Umsatz ~  Wochentag + Produktname + Temperatur + IsFerien + IsFeiertag + KielerWoche + Bewoelkung, data = train_data)
-
-summary(baseline_model)

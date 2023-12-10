@@ -1,0 +1,177 @@
+---
+title: "Baseline Model"
+format: 
+ html: 
+    toc: true
+    toc-location: left
+    number-sections: true
+    smooth-scroll: true
+    keep_qmd: true
+    echo: false
+    warning: false
+    message: false
+editor: visual
+date: today
+theme: cosmo
+---
+
+
+```{r Packages}
+
+library(styler)
+library(ggplot2)
+library(tidyverse)
+library(dplyr)
+library(lubridate)
+library(skimr)
+library(DataExplorer)
+library(car)
+```
+
+
+
+```{r}
+# Read the dataframe from the CSV file
+train_data_baseline <- read.csv("C:/Users/sunpn1013/Desktop/Data Science Kurs/SalesForecastingBakery/2_BaselineModel/train_data.csv")
+
+```
+
+# Feature Selection
+
+- **Wochentag**
+- **Produkt**
+- **Temperatur**
+- **Schulferien**
+- **Feiertag**
+- **Kieler Woche**
+
+# Implementation
+
+## All Products
+
+```{r}
+
+baseline_model <- lm(Umsatz ~  Wochentag + Produktname + Temperatur + IsFerien + IsFeiertag + KielerWoche  , data = train_data_baseline)
+
+summary(baseline_model)
+
+```
+
+
+# Evaluation
+
+```{r}
+# R-squared
+cat("R-squared: ", summary(baseline_model)$r.squared, "\n")
+
+# Adjusted R-squared
+cat("Adjusted R-squared: ", summary(baseline_model)$adj.r.squared, "\n")
+
+```
+
+```{r}
+# Plotting residuals
+par(mfrow = c(2, 2))
+plot(baseline_model)
+
+
+```
+
+
+
+## Implementation for different products
+
+```{r}
+
+# Define unique products from the dataset
+unique_products <- unique(train_data_baseline$Produktname)
+
+
+# List to store models
+product_models <- list()
+
+for (product in unique_products) {
+  # Filter data for the specific product
+  product_data <- subset(train_data_baseline, Produktname == product)
+  
+  # Fit the linear model for the product
+  model <- lm(Umsatz ~ Wochentag + Temperatur + IsFerien + IsFeiertag + KielerWoche, data = product_data)
+  
+  # Store the model in the list
+  product_models[[product]] <- model
+}
+
+
+```
+
+### Brot
+
+```{r}
+# Brot
+summary(product_models[["Brot"]])  # Replace "Product_Name_Here" with an actual product name
+
+```
+
+### Broetchen
+
+```{r}
+# Broetchen
+summary(product_models[["Broetchen"]])  
+
+```
+
+### Saisonbrot
+
+```{r}
+# Saisonbrot
+summary(product_models[["Saisonbrot"]])  
+```
+
+### Kuchen
+
+```{r}
+# Kuchen
+summary(product_models[["Kuchen"]])  
+```
+
+### Croissant
+
+```{r}
+# Croissant
+summary(product_models[["Croissant"]])  
+```
+
+### Konditorei
+
+```{r}
+# Konditorei
+summary(product_models[["Konditorei"]])  
+```
+
+```{r}
+# Extract R-squared values
+r_squared_values <- sapply(product_models, function(model) summary(model)$r.squared)
+
+# Create a data frame for the table
+r_squared_df <- data.frame(Produkt = names(r_squared_values), R_squared = r_squared_values)
+
+# Print the data frame (you can copy the output to your Markdown document)
+print(r_squared_df, row.names = FALSE)
+
+```
+
+```{r}
+library(knitr)
+library(kableExtra)
+
+# Assuming 'product_models' is your list of models
+r_squared_values <- sapply(product_models, function(model) summary(model)$r.squared)
+r_squared_df <- data.frame(Produkt = names(r_squared_values), R_squared = r_squared_values)
+
+# Create a Markdown table
+kable(r_squared_df, format = "markdown", col.names = c("Produkt", "R²-Wert")) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"))
+
+
+```
+
