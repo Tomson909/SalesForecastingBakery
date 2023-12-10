@@ -100,6 +100,8 @@ validation_data <- combined_data %>%
   filter(Datum >= as.Date("2017-08-01") & Datum <= as.Date("2018-07-31"))
 View(combined_data)
 ```
+
+
 ```{r}
 #First overview of the combined_data, Explore Data 
 print(combined_data)
@@ -122,6 +124,7 @@ print(cor_test_result)
 cor_test_result <- cor.test(combined_data$Umsatz, combined_data$Bewoelkung)
 print(cor_test_result)
 ```
+
 
 ```{r}
 #Korrelation zwischen katergoriellen Variablen mit dem Chi-Quadrat-Test
@@ -172,6 +175,22 @@ print(chi_square_result)
 
 
 #binäre Variblen korrelieren
+
+#Grafik vom Zusammenhang zwischen Ferien und Umsatz
+barplot(tapply(combined_data$Umsatz, combined_data$IsFerien, mean), names.arg = c("Ferien", "Kein Ferien"),
+        main = "der Zusammenhang zwischen Ferien und Umsatz",
+        xlab = "Ferein", ylab = "Umsatz")
+
+#Grafik vom Zusammenhang zwischen Regen und Umsatz
+barplot(tapply(combined_data$Umsatz, combined_data$IsRegen, mean), names.arg = c("Regen", "Kein Regen"),
+        main = "der Zusammenhang zwischen Regen und Umsatz",
+        xlab = "Regen", ylab = "Umsatz")
+
+#Grafik vom Zusammenhang zwischen Feiertag und Umsatz
+barplot(tapply(combined_data$Umsatz, combined_data$IsFeiertag, mean), names.arg = c("Feiertag", "Kein Feiertag"),
+        main = "der Zusammenhang zwischen Feiertag und Umsatz",
+        xlab = "Feiertag", ylab = "Umsatz")
+
 # Beispiel mit Punkt-biserialer Korrelation
 cor.test(combined_data$Umsatz, combined_data$IsFerien, method = "pearson")
 
