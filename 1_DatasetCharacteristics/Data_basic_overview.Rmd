@@ -191,7 +191,23 @@ barplot(tapply(combined_data$Umsatz, combined_data$IsFeiertag, mean), names.arg 
         main = "der Zusammenhang zwischen Feiertag und Umsatz",
         xlab = "Feiertag", ylab = "Umsatz")
 
-# Beispiel mit Punkt-biserialer Korrelation
-cor.test(combined_data$Umsatz, combined_data$IsFerien, method = "pearson")
+
+# Beispiel mit Punkt-biserialer Korrelation (Umsatz ~ IsFerien)
+# deutlicher Zusammenhang zwischen Umsatz und IsFerien
+cor.test(combined_data$Umsatz, as.numeric(combined_data$IsFerien), method = "pearson")
+
+
+
+# Beispiel mit Punkt-biserialer Korrelation (Umsatz ~ IsFeiertag)
+cor.test(combined_data$Umsatz, as.numeric(combined_data$IsFeiertag), method = "pearson")
+
+# Beispiel mit Punkt-biserialer Korrelation (Umsatz ~ IsRegen)
+# keinen Signifikanten Zusammenhang zwischen Umsatz und IsRegen
+cor.test(combined_data$Umsatz, as.numeric(combined_data$IsRegen), method = "pearson")
+
+# Beispiel mit Punkt-biserialer Korrelation (Umsatz ~ Wolkenlos)
+cor.test(combined_data$Umsatz, as.numeric(combined_data$Wolkenlos), method = "pearson")
+
+
 
 ```
