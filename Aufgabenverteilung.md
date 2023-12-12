@@ -8,3 +8,5 @@
 #Zum Vergleichen unterschiedlicher Modelle : glance(mod)
 -Ausgabe eines Dataframes, Ausgabe als Übersicht über alle Modelle
 
+#Hochladen des "bearbeiteten"-Testdatensatz in Kaggle mit unserem linearen Modell
+-Testdatensatz mit unseren definierten Variablen kombinieren, das Modell die Vorhersagen machen lassen und dann in Kaggle hochladen. 
