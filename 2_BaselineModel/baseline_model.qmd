@@ -15,7 +15,6 @@ date: today
 theme: cosmo
 ---
 
-
 ```{r Packages}
 
 library(styler)
@@ -28,8 +27,6 @@ library(DataExplorer)
 library(car)
 ```
 
-
-
 ```{r}
 # Read the dataframe from the CSV file
 train_data_baseline <- read.csv("C:/Users/sunpn1013/Desktop/Data Science Kurs/SalesForecastingBakery/2_BaselineModel/train_data.csv")
@@ -38,140 +35,110 @@ train_data_baseline <- read.csv("C:/Users/sunpn1013/Desktop/Data Science Kurs/Sa
 
 # Feature Selection
 
-- **Wochentag**
-- **Produkt**
-- **Temperatur**
-- **Schulferien**
-- **Feiertag**
-- **Kieler Woche**
+-   **Wochentag**
+-   **Warengruppe**
+-   **Schulferien**
+-   **Feiertag**
+-   **Kieler Woche**
 
-# Implementation
+## Create Tibbles for features and labels
+
+```{r}
+
+# Selecting relevant features and the target variable
+train_features <- train_data %>% 
+  select(Wochentag, Produktname, IsFerien, IsFeiertag, KielerWoche, Umsatz)
+
+
+# Convert categorical variables to dummy variables
+train_features <- train_features %>% 
+  mutate_at(vars(Wochentag, Produktname), as.factor) %>%
+  mutate_if(is.logical, as.integer) # Converting booleans to integers
+
+# Separate the target variable
+train_label <- train_features %>% 
+  select(Umsatz)
+
+# Remove the target variable from the features dataset
+train_features <- select(train_features, -Umsatz)
+
+# Dummy coding for categorical variables
+train_features_dummy <- as_tibble(model.matrix(~., data = train_features))
+
+# Selecting relevant features and the target variable
+validation_features <- validation_data %>% 
+  select(Wochentag, Produktname, IsFerien, IsFeiertag, KielerWoche, Umsatz)
+
+# Convert categorical variables to dummy variables
+validation_features <- validation_features %>% 
+  mutate_at(vars(Wochentag, Produktname), as.factor) %>%
+  mutate_if(is.logical, as.integer) # Converting booleans to integers
+
+# Separate the target variable
+validation_label <- validation_features %>% 
+  select(Umsatz)
+
+# Remove the target variable from the features dataset
+validation_features <- select(validation_features, -Umsatz)
+
+# Dummy coding for categorical variables
+validation_features_dummy <- as_tibble(model.matrix(~., data = validation_features))
+
+
+# Check the dimensions of the training features and labels
+cat("Training Features Dimensions:", dim(train_features), "\n")
+cat("Training Labels Dimensions:", dim(train_label), "\n")
+
+# Check the dimensions of the validation features and labels
+cat("Validation Features Dimensions:", dim(validation_features), "\n")
+cat("Validation Labels Dimensions:", dim(validation_label), "\n")
+
+
+
+```
+
+
+# Implementation of Baseline Model
 
 ## All Products
 
 ```{r}
 
-baseline_model <- lm(Umsatz ~  Wochentag + Produktname + Temperatur + IsFerien + IsFeiertag + KielerWoche  , data = train_data_baseline)
+# Fit the linear regression model
 
-summary(baseline_model)
+# Fügen Sie die Spalte 'Umsatz' aus train_label zu train_features hinzu
+train_data_for_model <- cbind(train_label, train_features_dummy)
+
+# Fit the linear regression model
+linear_model <- lm(Umsatz ~ ., data = train_data_for_model)
+
+# Summarize the model
+summary(linear_model)
+
+
+
 
 ```
-
 
 # Evaluation
 
 ```{r}
-# R-squared
-cat("R-squared: ", summary(baseline_model)$r.squared, "\n")
+# Make predictions on the validation dataset
+validation_predictions <- predict(linear_model, newdata = validation_features_dummy)
 
-# Adjusted R-squared
-cat("Adjusted R-squared: ", summary(baseline_model)$adj.r.squared, "\n")
+# Calculate MAE, MSE, RMSE, and R-squared
+mae <- mean(abs(validation_predictions - validation_label$Umsatz))
+mse <- mean((validation_predictions - validation_label$Umsatz)^2)
+rmse <- sqrt(mse)
+r_squared <- summary(linear_model)$r.squared
 
-```
-
-```{r}
-# Plotting residuals
-par(mfrow = c(2, 2))
-plot(baseline_model)
-
-
-```
-
-
-
-## Implementation for different products
-
-```{r}
-
-# Define unique products from the dataset
-unique_products <- unique(train_data_baseline$Produktname)
-
-
-# List to store models
-product_models <- list()
-
-for (product in unique_products) {
-  # Filter data for the specific product
-  product_data <- subset(train_data_baseline, Produktname == product)
-  
-  # Fit the linear model for the product
-  model <- lm(Umsatz ~ Wochentag + Temperatur + IsFerien + IsFeiertag + KielerWoche, data = product_data)
-  
-  # Store the model in the list
-  product_models[[product]] <- model
-}
+# Print the metrics
+cat("Mean Absolute Error (MAE):", mae, "\n")
+cat("Mean Squared Error (MSE):", mse, "\n")
+cat("Root Mean Squared Error (RMSE):", rmse, "\n")
+cat("R-squared:", r_squared, "\n")
 
 
 ```
 
-### Brot
-
-```{r}
-# Brot
-summary(product_models[["Brot"]])  # Replace "Product_Name_Here" with an actual product name
-
-```
-
-### Broetchen
-
-```{r}
-# Broetchen
-summary(product_models[["Broetchen"]])  
-
-```
-
-### Saisonbrot
-
-```{r}
-# Saisonbrot
-summary(product_models[["Saisonbrot"]])  
-```
-
-### Kuchen
-
-```{r}
-# Kuchen
-summary(product_models[["Kuchen"]])  
-```
-
-### Croissant
-
-```{r}
-# Croissant
-summary(product_models[["Croissant"]])  
-```
-
-### Konditorei
-
-```{r}
-# Konditorei
-summary(product_models[["Konditorei"]])  
-```
-
-```{r}
-# Extract R-squared values
-r_squared_values <- sapply(product_models, function(model) summary(model)$r.squared)
-
-# Create a data frame for the table
-r_squared_df <- data.frame(Produkt = names(r_squared_values), R_squared = r_squared_values)
-
-# Print the data frame (you can copy the output to your Markdown document)
-print(r_squared_df, row.names = FALSE)
-
-```
-
-```{r}
-library(knitr)
-library(kableExtra)
-
-# Assuming 'product_models' is your list of models
-r_squared_values <- sapply(product_models, function(model) summary(model)$r.squared)
-r_squared_df <- data.frame(Produkt = names(r_squared_values), R_squared = r_squared_values)
-
-# Create a Markdown table
-kable(r_squared_df, format = "markdown", col.names = c("Produkt", "R²-Wert")) %>%
-  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"))
-
-
-```
 
