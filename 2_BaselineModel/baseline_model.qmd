@@ -15,7 +15,6 @@ date: today
 theme: cosmo
 ---
 
-
 ```{r Packages}
 
 library(styler)
@@ -28,8 +27,6 @@ library(DataExplorer)
 library(car)
 ```
 
-
-
 ```{r}
 # Read the dataframe from the CSV file
 train_data_baseline <- read.csv("C:/Users/sunpn1013/Desktop/Data Science Kurs/SalesForecastingBakery/2_BaselineModel/train_data.csv")
@@ -38,12 +35,12 @@ train_data_baseline <- read.csv("C:/Users/sunpn1013/Desktop/Data Science Kurs/Sa
 
 # Feature Selection
 
-- **Wochentag**
-- **Produkt**
-- **Temperatur**
-- **Schulferien**
-- **Feiertag**
-- **Kieler Woche**
+-   **Wochentag**
+-   **Produkt**
+-   **Temperatur**
+-   **Schulferien**
+-   **Feiertag**
+-   **Kieler Woche**
 
 # Implementation
 
@@ -56,7 +53,6 @@ baseline_model <- lm(Umsatz ~  Wochentag + Produktname + Temperatur + IsFerien +
 summary(baseline_model)
 
 ```
-
 
 # Evaluation
 
@@ -76,8 +72,6 @@ plot(baseline_model)
 
 
 ```
-
-
 
 ## Implementation for different products
 
@@ -174,4 +168,3 @@ kable(r_squared_df, format = "markdown", col.names = c("Produkt", "R²-Wert")) %
 
 
 ```
-
