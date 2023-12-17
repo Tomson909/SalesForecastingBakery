@@ -1,0 +1,186 @@
+---
+title: "Untitled"
+author: "Yuliia Ilienko"
+date: "2023-12-17"
+output: html_document
+---
+
+```{r Packages}
+
+library(styler)
+library(ggplot2)
+library(tidyverse)
+library(dplyr)
+library(lubridate)
+library(skimr)
+library(DataExplorer)
+library(car)
+```
+
+```{r}
+# Data Import and Creating Relevant Variables
+# Read relevant data
+
+setwd("D:/учеба ГЕРМАНИЯ/Data Science/SalesForecastingBakery/0_DataPreparation")
+
+sales_data <- read_csv("umsatzdaten_gekuerzt.csv")
+weather_data <- read_csv("wetter.csv")
+kiwo_data <- read.csv("kiwo.csv")
+ferien_data <- read_csv("ferien.csv")
+
+# Convert "Datum" column to Date format
+kiwo_data$Datum <- as.Date(kiwo_data$Datum, format = "%Y-%m-%d")
+
+
+
+# Creating Big Data Set.Assuming 'Datum' is the common key for all datasets
+combined_data <- sales_data %>%
+  left_join(kiwo_data, by = "Datum") %>%
+  left_join(weather_data, by = "Datum") %>%
+  left_join(ferien_data, by = "Datum")
+
+
+# Create a vector of public holidays for Schleswig-Holstein (2013-2018), including Dec 24th and Dec 31st
+schleswig_holstein_feiertage <- as.Date(c(
+  "2013-01-01", "2013-03-29", "2013-04-01", "2013-05-01", "2013-05-09",
+  "2013-05-20", "2013-10-03", "2013-12-25", "2013-12-26", "2013-12-24", "2013-12-31",
+  "2014-01-01", "2014-04-18", "2014-04-21", "2014-05-01", "2014-05-29",
+  "2014-06-09", "2014-10-03", "2014-12-25", "2014-12-26", "2014-12-24", "2014-12-31",
+  "2015-01-01", "2015-04-03", "2015-04-06", "2015-05-01", "2015-05-14",
+  "2015-05-25", "2015-10-03", "2015-12-25", "2015-12-26", "2015-12-24", "2015-12-31",
+  "2016-01-01", "2016-03-25", "2016-03-28", "2016-05-01", "2016-05-05",
+  "2016-05-16", "2016-10-03", "2016-12-25", "2016-12-26", "2016-12-24", "2016-12-31",
+  "2017-01-01", "2017-04-14", "2017-04-17", "2017-05-01", "2017-05-25",
+  "2017-06-05", "2017-10-03", "2017-12-25", "2017-12-26", "2017-12-24", "2017-12-31",
+  "2018-01-01", "2018-03-30", "2018-04-02", "2018-05-01", "2018-05-10",
+  "2018-05-21", "2018-10-03", "2018-12-25", "2018-12-26", "2018-12-24", "2018-12-31"
+))
+
+
+# # Add a holiday column to combinded_data
+combined_data <- combined_data %>%
+  mutate(IsFeiertag = ymd(Datum) %in% schleswig_holstein_feiertage)
+
+
+# Mapping of Warengruppe to product name. 1=Brot; 2=Broetchen; 3=Croissant;4=Konditorei;5=Kuchen;6=Saisonbrot.
+combined_data <- combined_data %>%
+  mutate(Produktname = case_when(Warengruppe == 1 ~ "Brot",
+                                 Warengruppe == 2 ~ "Broetchen",
+                                 Warengruppe == 3 ~ "Croissant",
+                                 Warengruppe == 4 ~ "Konditorei",
+                                 Warengruppe == 5 ~ "Kuchen",
+                                 Warengruppe == 6 ~ "Saisonbrot"))
+
+#Create Variable for Weekdays
+combined_data <- combined_data %>%
+  mutate(
+    Datum = as.Date(Datum),
+    Wochentag = weekdays(Datum, abbreviate = FALSE)
+  )
+
+# Create Regenvariable
+# Funktion, um zu prüfen, ob ein Wettercode Regen darstellt
+ist_regen <- function(code) {
+  return(code >= 50 & code <= 69 | code >= 80 & code <= 82 | code >= 91 & code <= 92 | code %in% c(95, 97))
+}
+
+combined_data <- combined_data %>%
+  mutate(IsRegen = sapply(Wettercode, ist_regen))
+
+# Neue Kategorie "Wolkenlos" erstellen
+combined_data <- combined_data %>%
+  mutate(Wolkenlos = Bewoelkung >= 0 & Bewoelkung <= 2)
+
+
+# Kieler Woche as Logical Vector
+combined_data <- combined_data %>%
+  mutate(KielerWoche = if_else(is.na(KielerWoche), FALSE, KielerWoche == 1))
+# Creating validation data
+validation_data <- combined_data %>%
+  filter(Datum >= as.Date("2017-08-01") & Datum <= as.Date("2018-07-31"))
+view(validation_data)
+
+```
+
+
+```{r}
+# Read the dataframe from the CSV file
+read.csv("train_data.csv")
+test <- read.csv("test.csv")
+test <- select(test, -Warengruppe)
+test$Datum <- as.Date(test$Datum, format = "%Y-%m-%d")
+test_data <- left_join(test, combined_data, by = "Datum")
+test_data <- test_data %>% 
+  select(Datum, Wochentag, Produktname, IsFerien, IsFeiertag, KielerWoche, Umsatz, Temperatur)
+test_data <- test_data %>% 
+  mutate_at(vars(Wochentag, Produktname), as.factor) %>%
+  mutate_if(is.logical, as.integer) # Converting booleans to integers
+view(test_data)
+
+sample_data <- select(sample_data, -Umsatz)
+view(sample_data)
+
+```
+
+```{r}
+
+# Selecting relevant features and the target variable
+train_features <- train_data %>% 
+  select(Datum, Wochentag, Produktname, IsFerien, IsFeiertag, KielerWoche, Umsatz, Temperatur)
+
+
+# Convert categorical variables to dummy variables
+train_features <- train_features %>% 
+  mutate_at(vars(Wochentag, Produktname), as.factor) %>%
+  mutate_if(is.logical, as.integer) # Converting booleans to integers
+
+# Convert categorical variables to dummy variables
+validation_features <- validation_data %>% 
+  mutate_at(vars(Wochentag, Produktname), as.factor) %>%
+  mutate_if(is.logical, as.integer) # Converting booleans to integers
+
+# Selecting relevant features and the target variable
+validation_features <- validation_features%>% 
+  select(Datum, Wochentag, Produktname, IsFerien, IsFeiertag, KielerWoche, Umsatz, Temperatur)
+
+
+view(validation_features)
+
+```
+
+```{r}
+
+# Fit the linear regression model
+linear_model <- lm(Umsatz ~ ., data = train_features)
+
+# Summarize the model
+summary(linear_model)
+```
+
+```{r}
+# Make predictions on the validation dataset
+validation_features$Wochentag <- as.factor(validation_features$Wochentag)
+validation_predictions <- predict(linear_model, newdata = validation_features)
+
+# Calculate  R-squared
+r_squared <- summary(linear_model)$r.square
+print(r_squared)
+validation_predictions_tibble <- tibble(Umsatz = test_predictions)
+view(validation_predictions)
+
+
+```
+
+
+```{r}
+
+# Make predictions on the test dataset
+test_predictions <- predict(linear_model, newdata = test_data)
+
+
+# Convert test_predictions to a tibble with the column name 'Umsatz'
+test_predictions_tibble <- tibble(Umsatz = test_predictions)
+view(test_predictions_tibble)
+result <- cbind(sample_data, test_predictions_tibble)
+view(result)
+```
