@@ -11,7 +11,7 @@ library(skimr)
 library(DataExplorer)
 
 ##Get working directory correct
-setwd("C:/Users/sunpn1013/Desktop/Data Science Kurs/SalesForecastingBakery/0_DataPreparation")
+#setwd("C:/Users/annathede/Documents/Data Science/SalesForecasting/0_DataPreparation")
 
 # Data Import and Creating Relevant Variables
 # Read relevant data
@@ -35,8 +35,7 @@ weather_data <- read_csv("wetter.csv")
 
 
 
-#sales_data <- read_csv("umsatzdaten_gekuerzt.csv")
-
+sales_data <- read_csv("0_DataPreparation/umsatzdaten_gekuerzt.csv")
 
 
 # Convert "Datum" column to Date format
@@ -132,8 +131,8 @@ test_data <- combined_data %>%
 
 
 
-# Convert categorical variables to dummy variables
-#train_data <- train_data %>%
+#Convert categorical variables to dummy variables
+# train_data <- train_data %>%
  # mutate_at(vars(Wochentag, Produktname), as.factor) %>%
   #mutate_if(is.character, as.factor) %>%
   #mutate_if(is.logical, as.integer) # Converting booleans to integers

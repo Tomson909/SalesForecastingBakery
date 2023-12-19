@@ -27,9 +27,6 @@ library(DataExplorer)
 library(car)
 ```
 
-<<<<<<< HEAD
-=======
-
 # Feature Selection
 
 -   **Wochentag**
@@ -40,7 +37,6 @@ library(car)
 
 ## Create Tibbles for features and labels
 
->>>>>>> 9204de4f273e1779d8109936335d397153c2cba3
 ```{r}
 
 # Selecting relevant features and the target variable
@@ -91,19 +87,7 @@ cat("Validation Labels Dimensions:", dim(validation_label), "\n")
 
 ```
 
-
-<<<<<<< HEAD
--   **Wochentag**
--   **Produkt**
--   **Temperatur**
--   **Schulferien**
--   **Feiertag**
--   **Kieler Woche**
-
-# Implementation
-=======
 # Implementation of Baseline Model
->>>>>>> 9204de4f273e1779d8109936335d397153c2cba3
 
 ## All Products
 
@@ -123,11 +107,7 @@ summary(linear_model)
 
 ```
 
-<<<<<<< HEAD
-# Evaluation
-=======
 # Evaluation with validation data
->>>>>>> 9204de4f273e1779d8109936335d397153c2cba3
 
 ```{r}
 # Make predictions on the validation dataset
@@ -151,19 +131,7 @@ cat("Mean Absolute Percentage Error (MAPE):", mape, "%\n")
 
 ```
 
-<<<<<<< HEAD
-```{r}
-# Plotting residuals
-par(mfrow = c(2, 2))
-plot(baseline_model)
-
-
-```
-
-## Implementation for different products
-=======
 # Prediction for test data
->>>>>>> 9204de4f273e1779d8109936335d397153c2cba3
 
 ```{r}
 
@@ -188,77 +156,4 @@ write.csv(submission_data, "submission.csv", row.names = FALSE, quote = FALSE)
 
 ```
 
-<<<<<<< HEAD
-### Brot
 
-```{r}
-# Brot
-summary(product_models[["Brot"]])  # Replace "Product_Name_Here" with an actual product name
-
-```
-
-### Broetchen
-
-```{r}
-# Broetchen
-summary(product_models[["Broetchen"]])  
-
-```
-
-### Saisonbrot
-
-```{r}
-# Saisonbrot
-summary(product_models[["Saisonbrot"]])  
-```
-
-### Kuchen
-
-```{r}
-# Kuchen
-summary(product_models[["Kuchen"]])  
-```
-
-### Croissant
-
-```{r}
-# Croissant
-summary(product_models[["Croissant"]])  
-```
-
-### Konditorei
-
-```{r}
-# Konditorei
-summary(product_models[["Konditorei"]])  
-```
-
-```{r}
-# Extract R-squared values
-r_squared_values <- sapply(product_models, function(model) summary(model)$r.squared)
-
-# Create a data frame for the table
-r_squared_df <- data.frame(Produkt = names(r_squared_values), R_squared = r_squared_values)
-
-# Print the data frame (you can copy the output to your Markdown document)
-print(r_squared_df, row.names = FALSE)
-
-```
-
-```{r}
-library(knitr)
-library(kableExtra)
-
-# Assuming 'product_models' is your list of models
-r_squared_values <- sapply(product_models, function(model) summary(model)$r.squared)
-r_squared_df <- data.frame(Produkt = names(r_squared_values), R_squared = r_squared_values)
-
-# Create a Markdown table
-kable(r_squared_df, format = "markdown", col.names = c("Produkt", "R²-Wert")) %>%
-  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"))
-
-
-```
-=======
-
->>>>>>> 9204de4f273e1779d8109936335d397153c2cba3
