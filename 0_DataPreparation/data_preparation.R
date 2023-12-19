@@ -15,10 +15,29 @@ setwd("C:/Users/sunpn1013/Desktop/Data Science Kurs/SalesForecastingBakery/0_Dat
 
 # Data Import and Creating Relevant Variables
 # Read relevant data
-sales_data <- read_csv("umsatzdaten_gekuerzt.csv")
-weather_data <- read_csv("wetter.csv")
+sales_data <- read_csv("train.csv")
+test_data <- read_csv("test.csv")
+
+
+# Trainings- und Testdaten in einen Datensaz
+combined_data <- bind_rows(sales_data, test_data)
+
+#Kiwo Daten
 kiwo_data <- read.csv("kiwo.csv")
-ferien_data <- read_csv("ferien.csv")
+
+#Ferien Daten
+ferien_data <- read_csv("updated_ferien.csv")
+
+#Wetter Daten
+weather_data <- read_csv("wetter.csv")
+
+
+
+
+
+#sales_data <- read_csv("umsatzdaten_gekuerzt.csv")
+
+
 
 # Convert "Datum" column to Date format
 kiwo_data$Datum <- as.Date(kiwo_data$Datum, format = "%Y-%m-%d")
@@ -26,7 +45,14 @@ kiwo_data$Datum <- as.Date(kiwo_data$Datum, format = "%Y-%m-%d")
 
 
 # Creating Big Data Set.Assuming 'Datum' is the common key for all datasets
-combined_data <- sales_data %>%
+#combined_data <- sales_data %>%
+  ##left_join(kiwo_data, by = "Datum") %>%
+  #left_join(weather_data, by = "Datum") %>%
+  #left_join(ferien_data, by = "Datum")
+
+
+# Creating Big Data Set.Assuming 'Datum' is the common key for all datasets
+combined_data <- combined_data %>%
   left_join(kiwo_data, by = "Datum") %>%
   left_join(weather_data, by = "Datum") %>%
   left_join(ferien_data, by = "Datum")
@@ -45,7 +71,8 @@ schleswig_holstein_feiertage <- as.Date(c(
   "2017-01-01", "2017-04-14", "2017-04-17", "2017-05-01", "2017-05-25",
   "2017-06-05", "2017-10-03", "2017-12-25", "2017-12-26", "2017-12-24", "2017-12-31",
   "2018-01-01", "2018-03-30", "2018-04-02", "2018-05-01", "2018-05-10",
-  "2018-05-21", "2018-10-03", "2018-12-25", "2018-12-26", "2018-12-24", "2018-12-31"
+  "2018-05-21", "2018-10-03", "2018-12-25", "2018-12-26", "2018-12-24", "2018-12-31",
+  "2019-01-01", "2019-04-19", "2019-04-22", "2019-05-01", "2019-05-30", "2019-06-10"
 ))
 
 
@@ -88,6 +115,8 @@ combined_data <- combined_data %>%
 combined_data <- combined_data %>%
   mutate(KielerWoche = if_else(is.na(KielerWoche), FALSE, KielerWoche == 1))
 
+
+
 # Create Trainingsdatensatz vom 01.07.2013 bis 31.07.2017
 train_data <- combined_data %>%
   filter(Datum >= as.Date("2013-07-01") & Datum <= as.Date("2017-07-31"))
@@ -97,12 +126,17 @@ train_data <- combined_data %>%
 validation_data <- combined_data %>%
   filter(Datum >= as.Date("2017-08-01") & Datum <= as.Date("2018-07-31"))
 
+# Create Testdatensatz vom 01.08.2018 bis 30.07.2019
+test_data <- combined_data %>%
+  filter(Datum >= as.Date("2018-08-01") & Datum <= as.Date("2019-07-30"))
+
+
 
 # Convert categorical variables to dummy variables
-train_data <- train_data %>%
-  mutate_at(vars(Wochentag, Produktname), as.factor) %>%
-  mutate_if(is.character, as.factor) %>%
-  mutate_if(is.logical, as.integer) # Converting booleans to integers
+#train_data <- train_data %>%
+ # mutate_at(vars(Wochentag, Produktname), as.factor) %>%
+  #mutate_if(is.character, as.factor) %>%
+  #mutate_if(is.logical, as.integer) # Converting booleans to integers
 
 
 
