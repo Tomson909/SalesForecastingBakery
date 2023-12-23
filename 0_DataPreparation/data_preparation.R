@@ -24,6 +24,8 @@ combined_data <- bind_rows(sales_data, test_data)
 
 #Kiwo Daten
 kiwo_data <- read.csv("kiwo.csv")
+# Convert "Datum" column to Date format
+kiwo_data$Datum <- as.Date(kiwo_data$Datum, format = "%Y-%m-%d")
 
 #Ferien Daten
 ferien_data <- read_csv("updated_ferien.csv")
@@ -32,22 +34,9 @@ ferien_data <- read_csv("updated_ferien.csv")
 weather_data <- read_csv("wetter.csv")
 
 
-
-
-
-sales_data <- read_csv("0_DataPreparation/umsatzdaten_gekuerzt.csv")
-
-
 # Convert "Datum" column to Date format
 kiwo_data$Datum <- as.Date(kiwo_data$Datum, format = "%Y-%m-%d")
 
-
-
-# Creating Big Data Set.Assuming 'Datum' is the common key for all datasets
-#combined_data <- sales_data %>%
-  ##left_join(kiwo_data, by = "Datum") %>%
-  #left_join(weather_data, by = "Datum") %>%
-  #left_join(ferien_data, by = "Datum")
 
 
 # Creating Big Data Set.Assuming 'Datum' is the common key for all datasets
@@ -81,13 +70,14 @@ combined_data <- combined_data %>%
 
 
 # Mapping of Warengruppe to product name. 1=Brot; 2=Broetchen; 3=Croissant;4=Konditorei;5=Kuchen;6=Saisonbrot.
-combined_data <- combined_data %>%
-  mutate(Produktname = case_when(Warengruppe == 1 ~ "Brot",
-                                 Warengruppe == 2 ~ "Broetchen",
-                                 Warengruppe == 3 ~ "Croissant",
-                                 Warengruppe == 4 ~ "Konditorei",
-                                 Warengruppe == 5 ~ "Kuchen",
-                                 Warengruppe == 6 ~ "Saisonbrot"))
+#combined_data <- combined_data %>%
+ # mutate(Produktname = case_when(Warengruppe == 1 ~ "Brot",
+  #                               Warengruppe == 2 ~ "Broetchen",
+   #                              Warengruppe == 3 ~ "Croissant",
+    #                             Warengruppe == 4 ~ "Konditorei",
+     #                            Warengruppe == 5 ~ "Kuchen",
+      #                           Warengruppe == 6 ~ "Saisonbrot"))
+
 
 #Create Variable for Weekdays
 combined_data <- combined_data %>%
@@ -96,24 +86,48 @@ combined_data <- combined_data %>%
     Wochentag = weekdays(Datum, abbreviate = FALSE)
   )
 
+
+#Kieler Woche as Logical Vector
+combined_data <- combined_data %>%
+ mutate(KielerWoche = if_else(is.na(KielerWoche), FALSE, KielerWoche == 1))
+
+################################################################################
+
 # Create Regenvariable
 # Funktion, um zu prüfen, ob ein Wettercode Regen darstellt
-ist_regen <- function(code) {
-  return(code >= 50 & code <= 69 | code >= 80 & code <= 82 | code >= 91 & code <= 92 | code %in% c(95, 97))
-}
+#ist_regen <- function(code) {
+ # return(code >= 50 & code <= 69 | code >= 80 & code <= 82 | code >= 91 & code <= 92 | code %in% c(95, 97))
+#}
 
-combined_data <- combined_data %>%
-  mutate(IsRegen = sapply(Wettercode, ist_regen))
+#combined_data <- combined_data %>%
+ # mutate(IsRegen = sapply(Wettercode, ist_regen))
 
 # Neue Kategorie "Wolkenlos" erstellen
-combined_data <- combined_data %>%
-  mutate(Wolkenlos = Bewoelkung >= 0 & Bewoelkung <= 2)
+#combined_data <- combined_data %>%
+#  mutate(Wolkenlos = Bewoelkung >= 0 & Bewoelkung <= 2)
+
+################################################################################
+
+# Variablen as factor
+
+# Umwandlung der kategorialen Variablen in Faktoren
+combined_data$Warengruppe <- as.factor(combined_data$Warengruppe)
+combined_data$KielerWoche <- as.factor(combined_data$KielerWoche)
+combined_data$IsFerien <- as.factor(combined_data$IsFerien)
+combined_data$IsFeiertag <- as.factor(combined_data$IsFeiertag)
+combined_data$Wochentag <- as.factor(combined_data$Wochentag)
 
 
-# Kieler Woche as Logical Vector
-combined_data <- combined_data %>%
-  mutate(KielerWoche = if_else(is.na(KielerWoche), FALSE, KielerWoche == 1))
+# preparation of independent variables (dummy coding of categorical variables)
 
+#Erstellen der Dummy-Variablen und Hinzufügen der numerischen Variablen
+#features_matrix <- model.matrix(Umsatz ~ Warengruppe + KielerWoche + Temperatur + Windgeschwindigkeit + IsFerien + IsFeiertag + Wochentag, data=combined_data)
+
+#Umwandlung in ein tibble
+#features <- as_tibble(features_matrix)
+
+# Entfernt die erste Spalte, die den Intercept darstellt
+#features <- features[, -1]
 
 
 # Create Trainingsdatensatz vom 01.07.2013 bis 31.07.2017
@@ -130,12 +144,6 @@ test_data <- combined_data %>%
   filter(Datum >= as.Date("2018-08-01") & Datum <= as.Date("2019-07-30"))
 
 
-
-#Convert categorical variables to dummy variables
-# train_data <- train_data %>%
- # mutate_at(vars(Wochentag, Produktname), as.factor) %>%
-  #mutate_if(is.character, as.factor) %>%
-  #mutate_if(is.logical, as.integer) # Converting booleans to integers
 
 
 
