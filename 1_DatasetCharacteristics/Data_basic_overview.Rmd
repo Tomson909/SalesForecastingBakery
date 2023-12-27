@@ -211,3 +211,91 @@ cor.test(combined_data$Umsatz, as.numeric(combined_data$Wolkenlos), method = "pe
 
 
 ```
+```{r}
+#Korrelationsmatix numerische Variablen
+# Wähle nur numerische Spalten aus der Datentabelle aus
+numeric_data <- select_if(combined_data, is.numeric)
+
+# Erstelle eine Korrelationsmatrix
+cor_matrix <- cor(numeric_data, use = "complete.obs")
+
+# Konvertiere die Matrix in ein Datenformat, das ggplot2 verarbeiten kann
+cor_df <- as.data.frame(as.table(cor_matrix))
+
+# Erstelle die Heatmap mit ggplot2
+ggplot(cor_df, aes(Var1, Var2, fill = Freq)) +
+  geom_tile() +
+  scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0, name = "Korrelation") +
+  theme_minimal() +
+  labs(title = "Korrelationsmatrix numerische Variablen", x="", y="") + #Leere X und Y Achsen Beschriftungen
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+```{r}
+#Korrelationsmatrix mit nicht numerischen Variablen
+# Lade benötigte Bibliotheken
+library(vcd)
+library(ggplot2)
+
+# Konvertiere kategoriale Variablen in Faktoren
+combined_data$Wochentag <- as.factor(combined_data$Wochentag)
+combined_data$Produktname <- as.factor(combined_data$Produktname)
+
+# Erstelle eine Kreuztabelle der nicht numerischen Variablen
+cross_table <- table(combined_data$Wochentag, combined_data$Produktname)
+
+# Berechne die Cramér's V-Korrelationsmatrix
+cramer_result <- assocstats(cross_table)
+cramer_value <- cramer_result$cramers
+
+# Erstelle ein Datenframe mit den Cramér's V-Werten
+cramer_df <- data.frame(
+  Wochentag = rownames(cramer_value),
+  Produktname = colnames(cramer_value),
+  Freq = cramer_value
+)
+
+# Erstelle die Heatmap mit ggplot2
+ggplot(cramer_df, aes(Produktname, Wochentag, fill = Freq)) +
+  geom_tile() +
+  scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0, name = "Korrelation") +
+  theme_minimal() +
+  labs(title = "Cramér's V Korrelationsmatrix Heatmap", x = "", y = "") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+```{r}
+#Zusammenhang Ferien und Umsatz
+# Erstelle einen Boxplot
+ggplot(combined_data, aes(x = IsFerien, y = Umsatz, fill = IsFerien)) +
+  geom_boxplot() +
+  labs(title = "Umsatz während Ferien und Nicht-Ferien", x = "IsFerien", y = "Umsatz") +
+  theme_minimal()
+```
+
+```{r}
+#Zusammenhang Regen und Umsatz
+# Erstelle einen Boxplot
+ggplot(combined_data, aes(x = IsRegen, y = Umsatz, fill = IsRegen)) +
+  geom_boxplot() +
+  labs(title = "Umsatz beinflusst durch Regen?", x = "IsRegen", y = "Umsatz") +
+  theme_minimal()
+```
+
+```{r}
+library(ggplot2)
+#Zusammenhang Umsatz, Warengruppe und Wochentage
+# Festlege die Reihenfolge der Wochentage
+combined_data$Wochentag <- factor(combined_data$Wochentag, levels = c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"))
+
+# Umbenennung der Warengruppen
+combined_data$Warengruppe <- factor(combined_data$Warengruppe, levels = 1:6, labels = c("Bread (1)", "Rolls (2)", "Croissant (3)", "Confectionery (4)", "Cake (5)", "Seasonal Bread (6)"))
+
+# Umsatz nach Wochentagen und Warengruppen
+ggplot(combined_data, aes(x = Wochentag, y = Umsatz, fill = Warengruppe)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Umsatz nach Wochentagen und Warengruppen", x = "Wochentag", y = "Umsatz") +
+  theme_minimal() +
+  facet_wrap(~Warengruppe, scales = "free_y", ncol = 2)
+```
