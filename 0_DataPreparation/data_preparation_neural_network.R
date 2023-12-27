@@ -21,6 +21,8 @@ for (pkg in pkgs) {
 # Read relevant data
 sales_data <- read_csv("train.csv")
 
+test_data <- read_csv("test.csv")
+
 # Create Trainingsdatensatz vom 01.07.2013 bis 31.07.2017
 train_data <- sales_data %>%
   filter(Datum >= as.Date("2013-07-01") & Datum <= as.Date("2017-07-31"))
@@ -45,7 +47,7 @@ weather_data <- read_csv("wetter.csv")
 
 
 
-# Join für test_data
+# Join für train_data
 train_data_combined <- train_data %>%
   left_join(kiwo_data, by = "Datum") %>%
   left_join(weather_data, by = "Datum") %>%
@@ -53,6 +55,13 @@ train_data_combined <- train_data %>%
 
 # Join für validation_data
 validation_data_combined <- validation_data %>%
+  left_join(kiwo_data, by = "Datum") %>%
+  left_join(weather_data, by = "Datum") %>%
+  left_join(ferien_data, by = "Datum")
+
+
+# Join für test_data
+test_data_combined <- test_data %>%
   left_join(kiwo_data, by = "Datum") %>%
   left_join(weather_data, by = "Datum") %>%
   left_join(ferien_data, by = "Datum")
@@ -85,6 +94,11 @@ train_data_combined <- train_data_combined %>%
 validation_data_combined <- validation_data_combined %>%
   mutate(IsFeiertag = ymd(Datum) %in% schleswig_holstein_feiertage)
 
+# Add a holiday column to test_data
+test_data_combined <- test_data_combined %>%
+  mutate(IsFeiertag = ymd(Datum) %in% schleswig_holstein_feiertage)
+
+
 
 #Create Variable for Weekdays to train_data
 train_data_combined <- train_data_combined %>%
@@ -100,13 +114,24 @@ validation_data_combined <- validation_data_combined %>%
     Wochentag = weekdays(Datum, abbreviate = FALSE)
   )
 
+#Create Variable for Weekdays to test_data
+test_data_combined <- test_data_combined %>%
+  mutate(
+    Datum = as.Date(Datum),
+    Wochentag = weekdays(Datum, abbreviate = FALSE)
+  )
+
 
 #Kieler Woche as Logical Vector for train_data
 train_data_combined <- train_data_combined %>%
   mutate(KielerWoche = if_else(is.na(KielerWoche), FALSE, KielerWoche == 1))
 
-#Kieler Woche as Logical Vector for test_data
+#Kieler Woche as Logical Vector for validation_data
 validation_data_combined <- validation_data_combined  %>%
+  mutate(KielerWoche = if_else(is.na(KielerWoche), FALSE, KielerWoche == 1))
+
+#Kieler Woche as Logical Vector for test_data
+test_data_combined <- test_data_combined  %>%
   mutate(KielerWoche = if_else(is.na(KielerWoche), FALSE, KielerWoche == 1))
 
 
@@ -118,6 +143,10 @@ train_data_combined <- train_data_combined %>% select(-Wettercode)
 # Entferne der Variable "Wettercode" aus dem Datensatz "combined_data" [hat sehr viele NA]
 validation_data_combined <- validation_data_combined %>% select(-Wettercode)
 
+# Entferne der Variable "Wettercode" aus dem Datensatz "test_data" [hat sehr viele NA]
+test_data_combined <- test_data_combined %>% select(-Wettercode)
+
+
 
 # Entfernen aller Zeilen mit mindestens einem NA aus train_data
 train_data_combined <- na.omit(train_data_combined)
@@ -125,7 +154,8 @@ train_data_combined <- na.omit(train_data_combined)
 # Entfernen aller Zeilen mit mindestens einem NA aus validation_data
 validation_data_combined <- na.omit(validation_data_combined)
 
-
+# Entfernen aller Zeilen mit mindestens einem NA aus test_data
+test_data_combined <- na.omit(test_data_combined)
 
 
 
@@ -157,13 +187,24 @@ train_data_combined$IsFerien <- as.factor(train_data_combined$IsFerien)
 train_data_combined$IsFeiertag <- as.factor(train_data_combined$IsFeiertag)
 train_data_combined$Wochentag <- as.factor(train_data_combined$Wochentag)
 
-#Test_Data
+#Validation_Data
 
 validation_data_combined$Warengruppe <- as.factor(validation_data_combined$Warengruppe)
 validation_data_combined$KielerWoche <- as.factor(validation_data_combined$KielerWoche)
 validation_data_combined$IsFerien <- as.factor(validation_data_combined$IsFerien)
 validation_data_combined$IsFeiertag <- as.factor(validation_data_combined$IsFeiertag)
 validation_data_combined$Wochentag <- as.factor(validation_data_combined$Wochentag)
+
+
+#Test_Data
+
+test_data_combined$Warengruppe <- as.factor(test_data_combined$Warengruppe)
+test_data_combined$KielerWoche <- as.factor(test_data_combined$KielerWoche)
+test_data_combined$IsFerien <- as.factor(test_data_combined$IsFerien)
+test_data_combined$IsFeiertag <- as.factor(test_data_combined$IsFeiertag)
+test_data_combined$Wochentag <- as.factor(test_data_combined$Wochentag)
+
+
 
 # Entfernen aller Zeilen mit mindestens einem NA
 #combined_data_clean <- na.omit(combined_data)
@@ -190,6 +231,12 @@ features_validation <- as_tibble(features_matrix_validation)
 #features_validation <- features_test[, -1]
 
 
+# Erstellen der Dummy-Variablen und Hinzufügen der numerischen Variablen für validation_data_combined
+features_matrix_test <- model.matrix(~ Warengruppe + KielerWoche + Temperatur + Windgeschwindigkeit + IsFerien + IsFeiertag + Wochentag, data=test_data_combined)
+
+# Umwandlung in ein tibble
+features_test <- as_tibble(features_matrix_test)
+
 
 # Erstellen des label_train Tibbles aus der Umsatz-Spalte von train_data_combined
 label_train <- train_data_combined %>%
@@ -212,8 +259,7 @@ cat("Training features dimensions:", dim(features_train), "\n")
 cat("Training labels dimensions:", dim(label_train), "\n")
 cat("Validation labels dimensions:", dim(label_validation), "\n")
 cat("Validation features dimensions:", dim(features_validation), "\n")
-
-
+cat("Test features dimensions:", dim(features_test), "\n")
 
 # Exportieren von features_train als CSV
 write.csv(features_train, "features_train.csv", row.names = FALSE)
@@ -227,7 +273,7 @@ write.csv(label_validation, "label_validation.csv", row.names = FALSE)
 # Exportieren von features_validation als CSV
 write.csv(features_validation, "features_validation.csv", row.names = FALSE)
 
-
-
+# Exportieren von features_test als CSV
+write.csv(features_test, "features_test.csv", row.names = FALSE)
 
 
