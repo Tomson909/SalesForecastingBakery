@@ -1,23 +1,26 @@
-# Preperations
+###################################################
+### Preparation of the Environment ####
 
-## Load relevant packages
+# Clear environment
+remove(list = ls())
 
-library(styler)
-library(ggplot2)
-library(tidyverse)
-library(dplyr)
-library(lubridate)
-library(skimr)
-library(DataExplorer)
+# Create list with needed libraries
+pkgs <- c("readr", "dplyr", "reticulate", "ggplot2", "Metrics", "lubridate", "tidyverse")
 
-##Get working directory correct
-#setwd("C:/Users/annathede/Documents/Data Science/SalesForecasting/0_DataPreparation")
+# Load each listed library and check if it is installed and install if necessary
+for (pkg in pkgs) {
+  if (!require(pkg, character.only = TRUE)) {
+    install.packages(pkg)
+    library(pkg, character.only = TRUE)
+  }
+}
 
-# Data Import and Creating Relevant Variables
+###################################################
+### Data Import ####
+
 # Read relevant data
 sales_data <- read_csv("train.csv")
 test_data <- read_csv("test.csv")
-
 
 # Trainings- und Testdaten in einen Datensaz
 combined_data <- bind_rows(sales_data, test_data)
@@ -32,11 +35,6 @@ ferien_data <- read_csv("updated_ferien.csv")
 
 #Wetter Daten
 weather_data <- read_csv("wetter.csv")
-
-
-# Convert "Datum" column to Date format
-#kiwo_data$Datum <- as.Date(kiwo_data$Datum, format = "%Y-%m-%d")
-
 
 
 # Creating Big Data Set.Assuming 'Datum' is the common key for all datasets
@@ -68,17 +66,6 @@ schleswig_holstein_feiertage <- as.Date(c(
 combined_data <- combined_data %>%
   mutate(IsFeiertag = ymd(Datum) %in% schleswig_holstein_feiertage)
 
-
-# Mapping of Warengruppe to product name. 1=Brot; 2=Broetchen; 3=Croissant;4=Konditorei;5=Kuchen;6=Saisonbrot.
-#combined_data <- combined_data %>%
- # mutate(Produktname = case_when(Warengruppe == 1 ~ "Brot",
-  #                               Warengruppe == 2 ~ "Broetchen",
-   #                              Warengruppe == 3 ~ "Croissant",
-    #                             Warengruppe == 4 ~ "Konditorei",
-     #                            Warengruppe == 5 ~ "Kuchen",
-      #                           Warengruppe == 6 ~ "Saisonbrot"))
-
-
 #Create Variable for Weekdays
 combined_data <- combined_data %>%
   mutate(
@@ -89,26 +76,15 @@ combined_data <- combined_data %>%
 
 #Kieler Woche as Logical Vector
 combined_data <- combined_data %>%
- mutate(KielerWoche = if_else(is.na(KielerWoche), FALSE, KielerWoche == 1))
+  mutate(KielerWoche = if_else(is.na(KielerWoche), FALSE, KielerWoche == 1))
 
-################################################################################
 
-# Create Regenvariable
-# Funktion, um zu prüfen, ob ein Wettercode Regen darstellt
-#ist_regen <- function(code) {
- # return(code >= 50 & code <= 69 | code >= 80 & code <= 82 | code >= 91 & code <= 92 | code %in% c(95, 97))
-#}
+# Entferne der Variable "Wettercode" aus dem Datensatz "combined_data" [hat sehr viele NA]
+combined_data <- combined_data %>% select(-Wettercode)
 
-#combined_data <- combined_data %>%
- # mutate(IsRegen = sapply(Wettercode, ist_regen))
 
-# Neue Kategorie "Wolkenlos" erstellen
-#combined_data <- combined_data %>%
-#  mutate(Wolkenlos = Bewoelkung >= 0 & Bewoelkung <= 2)
-
-################################################################################
-
-# Variablen as factor
+###################################################
+### Data Preparation for Tensor Flow ####
 
 # Umwandlung der kategorialen Variablen in Faktoren
 combined_data$Warengruppe <- as.factor(combined_data$Warengruppe)
@@ -118,30 +94,44 @@ combined_data$IsFeiertag <- as.factor(combined_data$IsFeiertag)
 combined_data$Wochentag <- as.factor(combined_data$Wochentag)
 
 
-# preparation of independent variables (dummy coding of categorical variables)
-
 #Erstellen der Dummy-Variablen und Hinzufügen der numerischen Variablen
-#features_matrix <- model.matrix(Umsatz ~ Warengruppe + KielerWoche + Temperatur + Windgeschwindigkeit + IsFerien + IsFeiertag + Wochentag, data=combined_data)
+features_matrix <- model.matrix(Umsatz ~ Warengruppe + KielerWoche + Temperatur + Windgeschwindigkeit + IsFerien + IsFeiertag + Wochentag, data=combined_data)
 
 #Umwandlung in ein tibble
-#features <- as_tibble(features_matrix)
+features <- as_tibble(features_matrix)
 
 # Entfernt die erste Spalte, die den Intercept darstellt
-#features <- features[, -1]
+features <- features[, -1]
 
 
-# Create Trainingsdatensatz vom 01.07.2013 bis 31.07.2017
-train_data <- combined_data %>%
-  filter(Datum >= as.Date("2013-07-01") & Datum <= as.Date("2017-07-31"))
+# Hinzufügen label und Datum
+prepared_data <- tibble(Datum = cleaned_data$Datum, Umsatz = combined_data$Umsatz, features)
 
 
-# Create Validierungsdatensatz vom 01.08.2017 bis 31.07.2018
-validation_data <- combined_data %>%
-  filter(Datum >= as.Date("2017-08-01") & Datum <= as.Date("2018-07-31"))
+###################################################
+### Selection of Training, Validation and Test Data ####
 
-# Create Testdatensatz vom 01.08.2018 bis 30.07.2019
-test_data <- combined_data %>%
-  filter(Datum >= as.Date("2018-08-01") & Datum <= as.Date("2019-07-30"))
+
+# Set up date ranges for training, validation, and test data
+training_start <- as.Date("2013-07-01")
+training_end <- as.Date("2017-07-31")
+validation_start <- as.Date("2017-08-01")
+validation_end <- as.Date("2018-07-31")
+test_start <- as.Date("2018-08-01")
+test_end <- as.Date("2019-07-30")
+
+# Create Training Data Set
+train_data <- cleaned_data %>%
+  filter(Datum >= training_start & Datum <= training_end)
+
+# Create Validation Data Set
+validation_data <- cleaned_data %>%
+  filter(Datum >= validation_start & Datum <= validation_end)
+
+# Create Test Data Set
+test_data <- cleaned_data %>%
+  filter(Datum >= test_start & Datum <= test_end)
+
 
 
 
