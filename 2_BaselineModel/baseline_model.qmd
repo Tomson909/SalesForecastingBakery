@@ -155,5 +155,3 @@ write.csv(submission_data, "submission.csv", row.names = FALSE, quote = FALSE)
 
 
 ```
-
-

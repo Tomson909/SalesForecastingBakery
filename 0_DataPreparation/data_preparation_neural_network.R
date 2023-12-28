@@ -23,6 +23,8 @@ sales_data <- read_csv("train.csv")
 
 test_data <- read_csv("test.csv")
 
+
+
 # Create Trainingsdatensatz vom 01.07.2013 bis 31.07.2017
 train_data <- sales_data %>%
   filter(Datum >= as.Date("2013-07-01") & Datum <= as.Date("2017-07-31"))
@@ -277,3 +279,5 @@ write.csv(features_validation, "features_validation.csv", row.names = FALSE)
 write.csv(features_test, "features_test.csv", row.names = FALSE)
 
 
+#Exportieren von test_data_combined für die IDs
+write.csv(test_data_combined, "test_data_IDs.csv", row.names = FALSE)
