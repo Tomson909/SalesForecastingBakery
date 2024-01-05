@@ -151,6 +151,35 @@ validation_data_combined <- validation_data_combined %>% select(-Wettercode)
 test_data_combined <- test_data_combined %>% select(-Wettercode)
 
 
+# Untersuchen der NA in den Datensätzen
+
+train_data_combined
+
+
+# Untersuchen von Missing Values in jeder Spalte von train_data_combined
+missing_values_train <- train_data_combined %>%
+  summarise(across(everything(), ~sum(is.na(.))))
+
+# Anzeigen des Ergebnisses
+print(missing_values_train)
+
+
+# Untersuchen von Missing Values in jeder Spalte von validation_data_combined
+missing_values_validation <- validation_data_combined %>%
+  summarise(across(everything(), ~sum(is.na(.))))
+
+# Anzeigen des Ergebnisses
+print(missing_values_validation)
+
+
+# Untersuchen von Missing Values in jeder Spalte von test_data_combined
+missing_values_test <- test_data_combined %>%
+  summarise(across(everything(), ~sum(is.na(.))))
+
+# Anzeigen des Ergebnisses
+print(missing_values_test)
+
+
 
 # Entfernen aller Zeilen mit mindestens einem NA aus train_data
 train_data_combined <- na.omit(train_data_combined)
