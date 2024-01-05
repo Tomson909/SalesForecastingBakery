@@ -15,6 +15,8 @@ for (pkg in pkgs) {
   }
 }
 
+setwd("C:/Users/sunpn1013/Desktop/Data Science Kurs/SalesForecastingBakery/0_DataPreparation")
+
 ###################################################
 ### Data Import ####
 
@@ -161,12 +163,6 @@ test_data_combined <- na.omit(test_data_combined)
 
 
 
-# Entfernen aller Zeilen mit mindestens einem NA in train_data_combined
-#train_data_combined_clean <- na.omit(train_data_combined)
-
-# Entfernen aller Zeilen mit mindestens einem NA in train_data_combined
-#validation_data_combined_clean <- na.omit(validation_data_combined)
-
 
 
 ###################################################
@@ -174,12 +170,6 @@ test_data_combined <- na.omit(test_data_combined)
 
 
 # Umwandlung der kategorialen Variablen in Faktoren
-
-#combined_data$Warengruppe <- as.factor(combined_data$Warengruppe)
-#combined_data$KielerWoche <- as.factor(combined_data$KielerWoche)
-#combined_data$IsFerien <- as.factor(combined_data$IsFerien)
-#combined_data$IsFeiertag <- as.factor(combined_data$IsFeiertag)
-#combined_data$Wochentag <- as.factor(combined_data$Wochentag)
 
 # Train_Data
 
