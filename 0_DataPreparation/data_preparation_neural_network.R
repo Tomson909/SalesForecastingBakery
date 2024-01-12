@@ -5,7 +5,7 @@
 remove(list = ls())
 
 # Create list with needed libraries
-pkgs <- c("readr", "dplyr", "reticulate", "ggplot2", "Metrics", "lubridate", "tidyverse")
+pkgs <- c("readr", "dplyr", "reticulate", "ggplot2", "Metrics", "lubridate", "tidyverse", "VIM")
 
 # Load each listed library and check if it is installed and install if necessary
 for (pkg in pkgs) {
@@ -17,26 +17,32 @@ for (pkg in pkgs) {
 
 setwd("C:/Users/sunpn1013/Desktop/Data Science Kurs/SalesForecastingBakery/0_DataPreparation")
 
-###################################################
-### Data Import ####
+######### Data Import #########
 
 # Read relevant data
 sales_data <- read_csv("train.csv")
 
 test_data <- read_csv("test.csv")
 
+summary(sales_data)
 
 
-# Create Trainingsdatensatz vom 01.07.2013 bis 31.07.2017
+######### Split Data Into Training and Validation Set #########
+
+# Create Trainingsdatensatz vom 01.07.2013 bis 31.12.2017
 train_data <- sales_data %>%
-  filter(Datum >= as.Date("2013-07-01") & Datum <= as.Date("2017-07-31"))
+  filter(Datum >= as.Date("2013-07-01") & Datum <= as.Date("2017-12-31"))
 
-# Create Validierungsdatensatz vom 01.08.2017 bis 31.07.2018
+# Create Validierungsdatensatz vom 01.01.2018 bis 31.07.2018
 validation_data <- sales_data %>%
-  filter(Datum >= as.Date("2017-08-01") & Datum <= as.Date("2018-07-31"))
+  filter(Datum >= as.Date("2017-01-01") & Datum <= as.Date("2018-07-31"))
+
+summary(train_data)
+
+summary(validation_data)
 
 
-
+######### Add Feature Variables  #########
 
 #Kiwo Daten
 kiwo_data <- read.csv("kiwo.csv")
@@ -139,6 +145,7 @@ test_data_combined <- test_data_combined  %>%
   mutate(KielerWoche = if_else(is.na(KielerWoche), FALSE, KielerWoche == 1))
 
 
+######### MISSING VALUES - Part 1 #########
 
 # Entferne der Variable "Wettercode" aus dem Datensatz "combined_data" [hat sehr viele NA]
 train_data_combined <- train_data_combined %>% select(-Wettercode)
@@ -151,9 +158,7 @@ validation_data_combined <- validation_data_combined %>% select(-Wettercode)
 test_data_combined <- test_data_combined %>% select(-Wettercode)
 
 
-# Untersuchen der NA in den Datensätzen
-
-train_data_combined
+aggr(train_data_combined, combined=T, numbers=T)
 
 
 # Untersuchen von Missing Values in jeder Spalte von train_data_combined
@@ -164,12 +169,17 @@ missing_values_train <- train_data_combined %>%
 print(missing_values_train)
 
 
+aggr(validation_data_combined, combined=T, numbers=T)
+
 # Untersuchen von Missing Values in jeder Spalte von validation_data_combined
 missing_values_validation <- validation_data_combined %>%
   summarise(across(everything(), ~sum(is.na(.))))
 
 # Anzeigen des Ergebnisses
 print(missing_values_validation)
+
+
+aggr(test_data_combined, combined=T, numbers=T)
 
 
 # Untersuchen von Missing Values in jeder Spalte von test_data_combined
@@ -189,9 +199,6 @@ validation_data_combined <- na.omit(validation_data_combined)
 
 # Entfernen aller Zeilen mit mindestens einem NA aus test_data
 test_data_combined <- na.omit(test_data_combined)
-
-
-
 
 
 ###################################################
@@ -226,9 +233,12 @@ test_data_combined$IsFeiertag <- as.factor(test_data_combined$IsFeiertag)
 test_data_combined$Wochentag <- as.factor(test_data_combined$Wochentag)
 
 
+######### MISSING VALUES - Part 2 - Imputation #########
 
-# Entfernen aller Zeilen mit mindestens einem NA
-#combined_data_clean <- na.omit(combined_data)
+# Hier können wir die Imputationsverfahren ausprobieren. Dafür dürfen wir vorher natürlich keine NA rauswerfen
+
+
+######### ONE-HOT-ENCODING #########
 
 
 #Erstellen der Dummy-Variablen und Hinzufügen der numerischen Variablen
@@ -282,6 +292,9 @@ cat("Validation labels dimensions:", dim(label_validation), "\n")
 cat("Validation features dimensions:", dim(features_validation), "\n")
 cat("Test features dimensions:", dim(features_test), "\n")
 
+
+######### Export Data Sets for Tensor-Flow #########
+
 # Exportieren von features_train als CSV
 write.csv(features_train, "features_train.csv", row.names = FALSE)
 
@@ -300,3 +313,4 @@ write.csv(features_test, "features_test.csv", row.names = FALSE)
 
 #Exportieren von test_data_combined für die IDs
 write.csv(test_data_combined, "test_data_IDs.csv", row.names = FALSE)
+
