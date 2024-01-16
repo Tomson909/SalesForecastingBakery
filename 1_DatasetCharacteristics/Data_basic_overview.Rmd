@@ -276,14 +276,14 @@ combined_data$Wochentag <- factor(combined_data$Wochentag, levels = c("Monday", 
 combined_data$Warengruppe <- factor(combined_data$Warengruppe, levels = 1:6, labels = c("Bread (1)", "Rolls (2)", "Croissant (3)", "Confectionery (4)", "Cake (5)", "Seasonal Bread (6)"))
 
 # Umsatz nach Wochentagen und Warengruppen
-ggplot(combined_data, aes(x = Wochentag, y = Umsatz, fill = Warengruppe)) +
+ggplot(combined_data, aes(x = Wochentag, y = Umsatz, fill= Warengruppe)) +
   geom_bar(stat = "identity") +
   labs(title = "Umsatz nach Wochentagen und Warengruppen", x = "Wochentag", y = "Umsatz") +
   theme_minimal() +
-  facet_wrap(~Warengruppe, scales = "free_y", ncol = 2)
-  
-#facet_wrap(~Warengruppe) +
+  facet_wrap(~Warengruppe, scales = "free_y", ncol = 2) 
+  #facet_wrap(~Warengruppe) +
   #theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
 ```
 ```{r}
 # Erstelle ein Balkendiagramm für Ferien und Feiertage gegen den Umsatz
@@ -387,3 +387,55 @@ ggplot(Zusammengefügte_Ergebnisse) +
   theme_light() +
   geom_errorbar(aes(x=Wochentag, ymin=conf.low, ymax=conf.high), size=1.0, width=0.5, colour = "blue", alpha=1)
 ```
+````{r}
+library(broom)
+library(ggplot2)
+library(dplyr)
+
+#In den Umsatzdaten liegen NAs vor. Diese werden hier entfernt und der Testdatensatzzeitraum ebenfalls. Da mehr Tage nicht Ferien als Ferien sind, wird der Mittelwert verglichen. 
+#Testdatensatz-Zeitraum entfernen
+combined_data_reduziert <- combined_data %>%
+  filter(Datum >= as.Date("2013-07-01") & Datum <= as.Date("2018-07-31"))
+
+
+#Mittelwert von Ferientag vs. Nicht-Ferientag
+Durchschnitt_Wochentag <- combined_data_reduziert %>%
+  group_by(Wochentag) %>%
+  summarize(Durchschnittsumsatz = mean(Umsatz))
+
+Konfidenz_Wochentag <- combined_data_reduziert %>%
+  group_by(Wochentag) %>%
+  do(tidy(t.test(.$Umsatz)))
+
+Zusammengefügte_Ergebnisse <- merge(Durchschnitt_Wochentag, Konfidenz_Wochentag, by= "Wochentag")
+
+
+# Definiere eine Farbpalette für jeden Wochentag
+bar_colors <- c(
+  "Monday" = "#4C72B0",
+  "Tuesday" = "#55A868",
+  "Wednesday" = "#C44E52",
+  "Thursday" = "#8172B3",
+  "Friday" = "#CCB974",
+  "Saturday" = "#64B5CD",
+  "Sunday" = "#4E79A7"
+)
+
+# Plotten der Daten: Abhängigkeit der Variablen von Umsatz
+ggplot(Zusammengefügte_Ergebnisse) +
+  geom_bar(aes(x = Wochentag, y = Durchschnittsumsatz, fill = Wochentag), stat = "identity") +
+  labs(title = "Mittlere Umsätze der Wochentage", x = "Ferien", y = "Umsatz") +
+  theme_dark() +  # Ändere das Theme zu einem dunklen Hintergrund
+  scale_fill_manual(values = bar_colors) +  # Verwende die definierte Farbpalette
+  geom_errorbar(aes(x = Wochentag, ymin = conf.low, ymax = conf.high), size = 1.0, width = 0.5, colour = "white", alpha = 1) +
+  theme(
+    panel.background = element_rect(fill = "black"),  # Hintergrundfarbe des Plots
+    panel.grid.major = element_blank(),  # Kein Gitter
+    panel.grid.minor = element_blank(),  # Kein Gitter
+    axis.text = element_text(color = "black"),  # Textfarbe der Achsenbeschriftungen
+    axis.title = element_text(color = "black"),  # Textfarbe der Achsentitel
+    legend.text = element_text(color = "black"),  # Textfarbe der Legende
+    legend.title = element_text(color = "black")  # Textfarbe des Legendentitels
+  )
+
+````
