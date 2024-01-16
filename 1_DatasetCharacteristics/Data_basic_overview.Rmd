@@ -16,45 +16,28 @@ library(lubridate)
 library(skimr)
 library(DataExplorer)
 
+
 # Data Import and Creating Relevant Variables
 # Read relevant data
 sales_data <- read_csv("umsatzdaten_gekuerzt.csv")
 weather_data <- read_csv("wetter.csv")
 kiwo_data <- read.csv("kiwo.csv")
 ferien_data <- read_csv("ferien.csv")
+feiertage_data <- read.csv("Feiertage.txt")
 
 # Convert "Datum" column to Date format
 kiwo_data$Datum <- as.Date(kiwo_data$Datum, format = "%Y-%m-%d")
-
-
+feiertage_data$Datum <- as.Date(feiertage_data$Datum,format = "%Y-%m-%d")
 
 # Creating Big Data Set.Assuming 'Datum' is the common key for all datasets
 combined_data <- sales_data %>%
   left_join(kiwo_data, by = "Datum") %>%
   left_join(weather_data, by = "Datum") %>%
-  left_join(ferien_data, by = "Datum")
+  left_join(ferien_data, by = "Datum") %>%
+  left_join(feiertage_data, by = "Datum")
 
-
-# Create a vector of public holidays for Schleswig-Holstein (2013-2018), including Dec 24th and Dec 31st
-schleswig_holstein_feiertage <- as.Date(c(
-  "2013-01-01", "2013-03-29", "2013-04-01", "2013-05-01", "2013-05-09",
-  "2013-05-20", "2013-10-03", "2013-12-25", "2013-12-26", "2013-12-24", "2013-12-31",
-  "2014-01-01", "2014-04-18", "2014-04-21", "2014-05-01", "2014-05-29",
-  "2014-06-09", "2014-10-03", "2014-12-25", "2014-12-26", "2014-12-24", "2014-12-31",
-  "2015-01-01", "2015-04-03", "2015-04-06", "2015-05-01", "2015-05-14",
-  "2015-05-25", "2015-10-03", "2015-12-25", "2015-12-26", "2015-12-24", "2015-12-31",
-  "2016-01-01", "2016-03-25", "2016-03-28", "2016-05-01", "2016-05-05",
-  "2016-05-16", "2016-10-03", "2016-12-25", "2016-12-26", "2016-12-24", "2016-12-31",
-  "2017-01-01", "2017-04-14", "2017-04-17", "2017-05-01", "2017-05-25",
-  "2017-06-05", "2017-10-03", "2017-12-25", "2017-12-26", "2017-12-24", "2017-12-31",
-  "2018-01-01", "2018-03-30", "2018-04-02", "2018-05-01", "2018-05-10",
-  "2018-05-21", "2018-10-03", "2018-12-25", "2018-12-26", "2018-12-24", "2018-12-31"
-))
-
-
-# # Add a holiday column to combinded_data
-combined_data <- combined_data %>%
-  mutate(IsFeiertag = ymd(Datum) %in% schleswig_holstein_feiertage)
+#NA der Feiertage durch 0 ersetzen, da die Feiertag Datei nur die 1 enthält
+combined_data$Feiertag <- ifelse(is.na(combined_data$Feiertag), 0, 1)
 
 
 # Mapping of Warengruppe to product name. 1=Brot; 2=Broetchen; 3=Croissant;4=Konditorei;5=Kuchen;6=Saisonbrot.
@@ -298,4 +281,109 @@ ggplot(combined_data, aes(x = Wochentag, y = Umsatz, fill = Warengruppe)) +
   labs(title = "Umsatz nach Wochentagen und Warengruppen", x = "Wochentag", y = "Umsatz") +
   theme_minimal() +
   facet_wrap(~Warengruppe, scales = "free_y", ncol = 2)
+  
+#facet_wrap(~Warengruppe) +
+  #theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+```{r}
+# Erstelle ein Balkendiagramm für Ferien und Feiertage gegen den Umsatz
+ggplot(combined_data, aes(x = factor(IsFerien) , y = Umsatz, fill = factor(Feiertag))) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Umsatz während Ferien und Feiertagen", x = "IsFerien", y = "Umsatz", fill = "Feiertag") +
+  scale_x_discrete(labels = c("Keine Ferien", "Ferien")) +
+  scale_fill_manual(values = c("red", "lightblue"), name = "Feiertag") +  # Farben anpassen
+  theme_minimal()
+```
+
+```{r}
+# Erstelle ein Balkendiagramm 
+ggplot(combined_data, aes(x = Feiertag, y = Umsatz, fill = Feiertag)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Umsatz während Feiertagen und nicht Feiertagen", x = "Feiertag", y = "Umsatz") +
+  theme_minimal()
+
+```
+```{r}
+library(broom)
+#In den Umsatzdaten liegen NAs vor. Diese werden hier entfernt und der Testdatensatzzeitraum ebenfalls. Da mehr Tage nicht Ferien als Ferien sind, wird der Mittelwert verglichen. 
+#Testdatensatz-Zeitraum entfernen
+combined_data_reduziert <- combined_data %>%
+  filter(Datum >= as.Date("2013-07-01") & Datum <= as.Date("2018-07-31"))
+
+
+#Mittelwert von Ferientag vs. Nicht-Ferientag
+Durchschnitt_Ferien <- combined_data_reduziert %>%
+  group_by(IsFerien) %>%
+  summarize(Durchschnittsumsatz = mean(Umsatz))
+
+Konfidenz_Ferien <- combined_data_reduziert %>%
+  group_by(IsFerien) %>%
+  do(tidy(t.test(.$Umsatz)))
+
+Zusammengefügte_Ergebnisse <- merge(Durchschnitt_Ferien, Konfidenz_Ferien, by= "IsFerien")
+#miss_var_summary(umsatzdaten_characteristics_reduziert)
+
+#Plotten der Daten: Abhängigkeit der Variablen von Umsatz
+ggplot(Zusammengefügte_Ergebnisse) +
+  geom_bar(aes(x = IsFerien, y = Durchschnittsumsatz, fill=IsFerien), stat="identity") +
+  labs(title = "Mittlere Umsätze während der Ferien vs. Nicht-Ferien", x = "Ferien", y = "Umsatz") +
+  theme_light() +
+  geom_errorbar(aes(x=IsFerien, ymin=conf.low, ymax=conf.high), size=1.0, width=0.5, colour = "blue", alpha=1)
+
+#Plotten der Daten: Abhängigkeit der Variablen von Umsatz
+#ggplot(Durchschnitt_Ferien, aes(x = IsFerien, y = Durchschnittsumsatz, fill = IsFerien)) +
+  #geom_bar(stat = "identity") +
+  #labs(title = "Mittlere Umsätze während der Ferien vs. Nicht-Ferien", x = "Ferien", y = "Umsatz") +
+  #theme_minimal()
+```
+```{r}
+#Wochenende und Wochentag 
+library(ggplot2)
+library(dplyr)
+
+# Annahme: Die Tabelle heißt combined_data
+# Stelle sicher, dass deine Spalten korrekte Namen haben
+
+# Wandele die Spalte für Wochentage in einen Faktor um und sortiere die Wochentage
+combined_data$Weekday <- factor(combined_data$Wochentag, levels = c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"))
+
+# Erstelle eine neue Spalte, die angibt, ob es sich um ein Wochenende handelt
+combined_data$IsWeekend <- ifelse(combined_data$Wochentag %in% c("Saturday", "Sunday"), "Weekend", "Weekday")
+
+# Filtere NA-Werte aus der Umsatzspalte
+combined_data <- combined_data[!is.na(combined_data$Umsatz), ]
+
+# Erstelle ein Balkendiagramm für den Umsatz nach Wochentagen und Wochenende/Werktag
+ggplot(combined_data, aes(x = Weekday, y = Umsatz, fill = IsWeekend)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Umsatzvergleich zwischen Werktagen und Wochenenden", x = "Wochentag", y = "Umsatz", fill = "Tagtyp") +
+  scale_fill_manual(values = c("Weekday" = "lightblue", "Weekend" = "lightgreen")) +  # Farben anpassen
+  theme_minimal()
+
+```
+```{r}
+#In den Umsatzdaten liegen NAs vor. Diese werden hier entfernt und der Testdatensatzzeitraum ebenfalls. Da mehr Tage nicht Ferien als Ferien sind, wird der Mittelwert verglichen. 
+#Testdatensatz-Zeitraum entfernen
+combined_data_reduziert <- combined_data %>%
+  filter(Datum >= as.Date("2013-07-01") & Datum <= as.Date("2018-07-31"))
+
+
+#Mittelwert von Ferientag vs. Nicht-Ferientag
+Durchschnitt_Wochentag <- combined_data_reduziert %>%
+  group_by(Wochentag) %>%
+  summarize(Durchschnittsumsatz = mean(Umsatz))
+
+Konfidenz_Wochentag <- combined_data_reduziert %>%
+  group_by(Wochentag) %>%
+  do(tidy(t.test(.$Umsatz)))
+
+Zusammengefügte_Ergebnisse <- merge(Durchschnitt_Wochentag, Konfidenz_Wochentag, by= "Wochentag")
+#miss_var_summary(umsatzdaten_characteristics_reduziert)
+
+#Plotten der Daten: Abhängigkeit der Variablen von Umsatz
+ggplot(Zusammengefügte_Ergebnisse) +
+  geom_bar(aes(x = Wochentag, y = Durchschnittsumsatz, fill=Wochentag), stat="identity") +
+  labs(title = "Mittlere Umsätze während der Wochentage", x = "Ferien", y = "Umsatz") +
+  theme_light() +
+  geom_errorbar(aes(x=Wochentag, ymin=conf.low, ymax=conf.high), size=1.0, width=0.5, colour = "blue", alpha=1)
 ```
