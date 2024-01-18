@@ -83,28 +83,50 @@ View(combined_data)
 
 ######### MISSING VALUES - KNN Imputation #########
 
-
 # Check for missing values in Wettercode
-sum(is.na(combined_data$Wettercode)) # 2607
+#sum(is.na(combined_data$Wettercode)) # 2607
 
 # Check the number of complete cases
-n_complete_cases <- sum(complete.cases(wettercode_df))
+#n_complete_cases <- sum(complete.cases(wettercode_df))
 
 # Wettercode aus combined data in einen Datenrahmen umgewandelt
-wettercode_df <- data.frame(Wettercode = combined_data$Wettercode)
+#wettercode_df <- data.frame(Wettercode = combined_data$Wettercode)
 
 # Convert to numeric
-wettercode_df$Wettercode <- as.numeric(wettercode_df$Wettercode)
-class(wettercode_df$Wettercode)
+#wettercode_df$Wettercode <- as.numeric(wettercode_df$Wettercode)
+#class(wettercode_df$Wettercode)
 
 # Wende k-NN-Imputation an
-wettercode_imputed <- knnImputation(wettercode_df, k = 10)
+#wettercode_imputed <- knnImputation(wettercode_df, k = 1)
 
 # Füge die imputierte Spalte wieder in den ursprünglichen Datensatz ein
-combined_data$Wettercode <- wettercode_imputed$Wettercode
+#combined_data$Wettercode <- wettercode_imputed$Wettercode
 
 # Ausgabe des imputierten Datensatzes
-print(combined_data)
+#print(combined_data)
+
+
+
+
+######## Missing Values - naive forecasting ########
+
+# Gruppieren nach Datum und Wochentag, berechnen Sie den Durchschnitt der Wettercodes
+forecast_data <- train_data %>%
+  group_by(Wochentag) %>%
+  summarize(NaiveForecast = mean(Wettercode, na.rm = TRUE))
+
+# Verbinden Sie die naive Vorhersage mit dem Validierungsdatensatz
+validation_data <- validation_data %>%
+  left_join(forecast_data, by = "Wochentag")
+
+# Füllen Sie fehlende Werte in der NaiveForecast-Spalte mit dem Durchschnitt aller Wettercodes
+validation_data$NaiveForecast[is.na(validation_data$NaiveForecast)] <- mean(train_data$Wettercode, na.rm = TRUE)
+print(validation_data[, c("Datum", "Wettercode", "NaiveForecast")])
+
+view(forecast_data)
+view(validation_data)
+view(combined_data)
+
 
 
 
@@ -179,7 +201,6 @@ write.csv(features_validation, "features_validation.csv", row.names = FALSE)
 
 # Exportieren von features_test als CSV
 write.csv(features_test, "features_test.csv", row.names = FALSE)
-
 
 #Exportieren von test_data_combined für die IDs
 write.csv(test_data_combined, "test_data_IDs.csv", row.names = FALSE)
