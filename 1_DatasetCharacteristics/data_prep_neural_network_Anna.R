@@ -80,13 +80,25 @@ validation_data <- combined_data %>%
   filter(Datum >= as.Date("2017-08-01") & Datum <= as.Date("2018-07-31"))
 View(combined_data)
 
- ######### MISSING VALUES - Part KNN  #########
+
+######### MISSING VALUES - KNN Imputation #########
+
+
+# Check for missing values in Wettercode
+sum(is.na(combined_data$Wettercode)) # 2607
+
+# Check the number of complete cases
+n_complete_cases <- sum(complete.cases(wettercode_df))
+
 # Wettercode aus combined data in einen Datenrahmen umgewandelt
 wettercode_df <- data.frame(Wettercode = combined_data$Wettercode)
-view(wettercode_df)
+
+# Convert to numeric
+wettercode_df$Wettercode <- as.numeric(wettercode_df$Wettercode)
+class(wettercode_df$Wettercode)
 
 # Wende k-NN-Imputation an
-wettercode_imputed <- knnImputation(wettercode_df, k=2)
+wettercode_imputed <- knnImputation(wettercode_df, k = 10)
 
 # Füge die imputierte Spalte wieder in den ursprünglichen Datensatz ein
 combined_data$Wettercode <- wettercode_imputed$Wettercode
