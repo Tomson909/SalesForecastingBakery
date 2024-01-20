@@ -15,14 +15,10 @@ for (pkg in pkgs) {
   }
 }
 
+install.packages("mice")
 
 setwd("D:/учеба ГЕРМАНИЯ/Data Science/SalesForecastingBakery/0_DataPreparation")
 
-
-
-##########WEG
-
-install.packages("Hmisc")
 
 ######### Data Import #########
 
@@ -157,9 +153,12 @@ view(train_data_combined)
 view(validation_data_combined)
 view(test_data_combined)
 
+
+###########Weg
+
+
 ###############Missing Values Yuliia
 
-install.packages("mice")
 library(mice)
 
 ##Train Data##
@@ -168,7 +167,6 @@ imp <- mice(train_data_combined[, c("Wettercode", "Temperatur", "Bewoelkung")])
 
 # Data Imputation
 my_data_imputed <- complete(imp)
-view(my_data_imputed)
 
 # Numeration von Datasets um join zu machen
 my_data_imputed <- my_data_imputed %>% mutate(row_number = row_number())
@@ -194,7 +192,6 @@ imp <- mice(validation_data_combined[, c("Wettercode", "Temperatur", "Bewoelkung
 
 # Data Imputation
 my_data_imputed <- complete(imp)
-view(my_data_imputed)
 
 # Numeration von Datasets um join zu machen
 my_data_imputed <- my_data_imputed %>% mutate(row_number = row_number())
@@ -220,7 +217,6 @@ imp <- mice(test_data_combined[, c("Wettercode", "Temperatur", "Bewoelkung")])
 
 # Data Imputation
 my_data_imputed <- complete(imp)
-view(my_data_imputed)
 
 # Numeration von Datasets um join zu machen
 my_data_imputed <- my_data_imputed %>% mutate(row_number = row_number())
@@ -240,12 +236,12 @@ test_data_combined <- test_data_combined %>%
 
 view(test_data_combined)
 
+
 ### Variable IsRegen erstellen ###
 
 train_data_combined$IsRegen <- train_data_combined$Wettercode >= 60 & train_data_combined$Wettercode <= 69
 validation_data_combined$IsRegen <- validation_data_combined$Wettercode >= 60 & validation_data_combined$Wettercode <= 69
 test_data_combined$IsRegen <- test_data_combined$Wettercode >= 60 & test_data_combined$Wettercode <= 69
-
 
 
 ###################################################
