@@ -1,0 +1,524 @@
+---
+title: "Gruppe 1"
+author: "Tom Ruge, Anna-Lena Thede, Yuliia Ilienko & Lauritz Schewior"
+format:
+  revealjs: 
+    theme: dark
+---
+
+```{r}
+
+setwd("C:/Users/sunpn1013/Desktop/Neuer Ordner")
+
+```
+
+```{r}
+
+# Create list with needed libraries
+pkgs <- c("purrr","DataExplorer","caret","Metrics","readr", "dplyr", "reticulate", "ggplot2", "Metrics", "lubridate", "tidyverse", "VIM","broom", "RColorBrewer")
+
+# Load each listed library and check if it is installed and install if necessary
+for (pkg in pkgs) {
+  if (!require(pkg, character.only = TRUE)) {
+    install.packages(pkg)
+    library(pkg, character.only = TRUE)
+  }
+}
+```
+
+```{r}
+
+# Read relevant data
+sales_data <- read_csv("train.csv")
+kiwo_data <- read.csv("kiwo.csv")
+ferien_data <- read_csv("ferien.csv")
+weather_data <- read_csv("wetter.csv")
+
+# Convert "Datum" column to Date format in kiwo_data
+kiwo_data$Datum <- as.Date(kiwo_data$Datum, format = "%Y-%m-%d")
+
+# Create a vector of public holidays for Schleswig-Holstein (2013-2018), including Dec 24th and Dec 31st
+schleswig_holstein_feiertage <- as.Date(c(
+  "2013-01-01", "2013-03-29", "2013-04-01", "2013-05-01", "2013-05-09",
+  "2013-05-20", "2013-10-03", "2013-12-25", "2013-12-26", "2013-12-24", "2013-12-31",
+  "2014-01-01", "2014-04-18", "2014-04-21", "2014-05-01", "2014-05-29",
+  "2014-06-09", "2014-10-03", "2014-12-25", "2014-12-26", "2014-12-24", "2014-12-31",
+  "2015-01-01", "2015-04-03", "2015-04-06", "2015-05-01", "2015-05-14",
+  "2015-05-25", "2015-10-03", "2015-12-25", "2015-12-26", "2015-12-24", "2015-12-31",
+  "2016-01-01", "2016-03-25", "2016-03-28", "2016-05-01", "2016-05-05",
+  "2016-05-16", "2016-10-03", "2016-12-25", "2016-12-26", "2016-12-24", "2016-12-31",
+  "2017-01-01", "2017-04-14", "2017-04-17", "2017-05-01", "2017-05-25",
+  "2017-06-05", "2017-10-03", "2017-12-25", "2017-12-26", "2017-12-24", "2017-12-31",
+  "2018-01-01", "2018-03-30", "2018-04-02", "2018-05-01", "2018-05-10",
+  "2018-05-21", "2018-10-03", "2018-12-25", "2018-12-26", "2018-12-24", "2018-12-31",
+  "2019-01-01", "2019-04-19", "2019-04-22", "2019-05-01", "2019-05-30", "2019-06-10"
+))
+
+######### Add Feature Variables  ######### 
+
+# General processing for the whole sales_data
+combined_data <- sales_data %>%
+  left_join(kiwo_data, by = "Datum") %>%
+  left_join(weather_data, by = "Datum") %>%
+  left_join(ferien_data, by = "Datum") %>%
+  mutate(
+    IsFeiertag = ymd(Datum) %in% schleswig_holstein_feiertage,
+    Wochentag = weekdays(Datum, abbreviate = FALSE),
+    KielerWoche = if_else(is.na(KielerWoche), FALSE, KielerWoche == 1)
+  )
+
+# Mapping of Warengruppe to product name. 1=Brot; 2=Broetchen; 3=Croissant;4=Konditorei;5=Kuchen;6=Saisonbrot.
+combined_data <- combined_data %>%
+  mutate(Produktname = case_when(Warengruppe == 1 ~ "Brot",
+                                 Warengruppe == 2 ~ "Broetchen",
+                                 Warengruppe == 3 ~ "Croissant",
+                                 Warengruppe == 4 ~ "Konditorei",
+                                 Warengruppe == 5 ~ "Kuchen",
+                                 Warengruppe == 6 ~ "Saisonbrot"))
+
+
+
+# Create Regenvariable
+# Funktion, um zu prüfen, ob ein Wettercode Regen darstellt
+#ist_regen <- function(code) {
+#return(code >= 50 & code <= 69 | code >= 80 & code <= 82 | code >= 91 & code <= 92 | code %in% c(95, 97))
+#}
+
+#combined_data <- combined_data %>%
+# mutate(Regen = sapply(Wettercode, ist_regen))
+
+
+```
+
+
+## Vorhandene Variablen
+
+- Datum
+- Warengruppe
+- Umsatz
+- Kieler Woche
+- Wetterdaten 
+
+## Wochentag
+
+```{r, echo=TRUE, eval=FALSE}
+#| code-line-numbers: 7
+#| echo: true
+
+combined_data <- sales_data %>%
+  left_join(kiwo_data, by = "Datum") %>%
+  left_join(weather_data, by = "Datum") %>%
+  left_join(ferien_data, by = "Datum") %>%
+  mutate(
+    IsFeiertag = ymd(Datum) %in% schleswig_holstein_feiertage,
+    Wochentag = weekdays(Datum, abbreviate = FALSE),
+    KielerWoche = if_else(is.na(KielerWoche), FALSE, KielerWoche == 1)
+  )
+
+```
+
+```{r}
+# Mapping of Warengruppe to product name. 1=Brot; 2=Broetchen; 3=Croissant;4=Konditorei;5=Kuchen;6=Saisonbrot.
+combined_data <- combined_data %>%
+  mutate(Produktname = case_when(Warengruppe == 1 ~ "Brot",
+                                 Warengruppe == 2 ~ "Broetchen",
+                                 Warengruppe == 3 ~ "Croissant",
+                                 Warengruppe == 4 ~ "Konditorei",
+                                 Warengruppe == 5 ~ "Kuchen",
+                                 Warengruppe == 6 ~ "Saisonbrot"))
+```
+
+
+## Feiertage 
+
+```{r}
+#| code-line-numbers: 1-2
+#| echo: true
+
+# Create a vector of public holidays for Schleswig-Holstein (2013-2018), including Dec 24th and Dec 31st
+schleswig_holstein_feiertage <- as.Date(c(
+  "2013-01-01", "2013-03-29", "2013-04-01", "2013-05-01", "2013-05-09",
+  "2013-05-20", "2013-10-03", "2013-12-25", "2013-12-26", "2013-12-24", "2013-12-31",
+  "2014-01-01", "2014-04-18", "2014-04-21", "2014-05-01", "2014-05-29",
+  "2014-06-09", "2014-10-03", "2014-12-25", "2014-12-26", "2014-12-24", "2014-12-31",
+  "2015-01-01", "2015-04-03", "2015-04-06", "2015-05-01", "2015-05-14",
+  "2015-05-25", "2015-10-03", "2015-12-25", "2015-12-26", "2015-12-24", "2015-12-31",
+  "2016-01-01", "2016-03-25", "2016-03-28", "2016-05-01", "2016-05-05",
+  "2016-05-16", "2016-10-03", "2016-12-25", "2016-12-26", "2016-12-24", "2016-12-31",
+  "2017-01-01", "2017-04-14", "2017-04-17", "2017-05-01", "2017-05-25",
+  "2017-06-05", "2017-10-03", "2017-12-25", "2017-12-26", "2017-12-24", "2017-12-31",
+  "2018-01-01", "2018-03-30", "2018-04-02", "2018-05-01", "2018-05-10",
+  "2018-05-21", "2018-10-03", "2018-12-25", "2018-12-26", "2018-12-24", "2018-12-31",
+  "2019-01-01", "2019-04-19", "2019-04-22", "2019-05-01", "2019-05-30", "2019-06-10"
+))
+
+```
+
+
+## Schulferien 
+
+
+```{r}
+#| echo: true
+#| #| output-location: fragment
+
+ferien_data <- read_csv("ferien.csv")
+print(head(ferien_data, 10))
+
+
+```
+
+
+## Regen
+
+```{r}
+#| echo: true
+#ist_regen <- function(code) {
+#return(code >= 50 & code <= 69 | code >= 80 & code <= 82 | code >= 91 & code <= 92 | code %in% c(95, 97))
+#}
+
+#combined_data <- combined_data %>%
+ #mutate(Regen = sapply(Wettercode, ist_regen))
+
+```
+
+
+```{r Vorbereitung für Abbildung 1}
+#| echo: false
+
+# Calculate the average sales per weekday for each product group
+Umsatzdaten_summary <- combined_data %>%
+  group_by(Wochentag, Produktname) %>%
+  summarise(Avg_Umsatz = mean(Umsatz, na.rm = TRUE)) %>%
+  ungroup() # Ungroup the data for plotting
+
+
+
+# Calculate the SEM and the confidence intervals
+Umsatzdaten_summary <- combined_data %>%
+  group_by(Wochentag, Produktname) %>%
+  summarise(
+    Avg_Umsatz = mean(Umsatz, na.rm = TRUE),
+    SEM = sd(Umsatz, na.rm = TRUE) / sqrt(n()),
+    CI_upper = Avg_Umsatz + 1.96 * SEM,
+    CI_lower = Avg_Umsatz - 1.96 * SEM
+  ) %>%
+  ungroup() # Ungroup the data for plotting
+
+```
+
+
+## Abbildung Umsatz nach Wochentag und Produkt 
+
+```{r}
+#| echo: true
+
+
+# Convert 'Wochentag' to an ordered factor
+Umsatzdaten_summary <- Umsatzdaten_summary %>%
+  mutate(Wochentag = factor(Wochentag, levels = c("Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag")))
+
+# Plot the bar chart with separate panels for each product group and consistent colors
+ggplot(Umsatzdaten_summary, aes(x = Wochentag, y = Avg_Umsatz, fill = Produktname)) +
+  geom_bar(stat = "identity", position = position_dodge(width = 0.8)) +
+  geom_errorbar(aes(ymin = CI_lower, ymax = CI_upper), position = position_dodge(width = 0.8), width = 0.25) +
+  facet_wrap(~ Produktname, scales = "free_y") + # creates a separate plot for each product group
+  scale_fill_brewer(palette = "Set3") + # use a color palette for the fill colors
+  theme_minimal() +
+  labs(x = "Wochentag", y = "Durchschnittlicher Umsatz", fill = "Produktname",
+       title = "Durchschnittlicher Umsatz nach Wochentag und Produkt") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 24), # Adjust x-axis text size
+        axis.text.y = element_text(size = 24), # Adjust y-axis text size
+        axis.title.x = element_text(size = 28), # Adjust x-axis title size
+        axis.title.y = element_text(size = 28), # Adjust y-axis title size
+        plot.title = element_text(size = 32, hjust = 0.5), # Adjust plot title size and alignment
+        legend.text = element_text(size = 24), # Adjust legend text size
+        legend.title = element_text(size = 28), # Adjust legend title size
+        legend.key.size = unit(5.5, "lines"), # Adjust legend key size
+        strip.text = element_text(size = 24)) # Adjust facet strip text size
+
+
+```
+
+## Abbildung Umsatz nach Wochentag und Produkt  
+
+![](Abbildung_Wochentag.png)
+
+
+## Abbildung Umsatz Ferien vs. Nicht-Ferien
+
+```{r}
+
+#Mittelwert von Ferientag vs. Nicht-Ferientag
+Durchschnitt_Ferien <- combined_data %>%
+  group_by(IsFerien) %>%
+  summarize(Durchschnittsumsatz = mean(Umsatz))
+
+Konfidenz_Ferien <- combined_data %>%
+  group_by(IsFerien) %>%
+  do(tidy(t.test(.$Umsatz)))
+
+ergebnisse <- merge(Durchschnitt_Ferien, Konfidenz_Ferien, by= "IsFerien")
+
+```
+
+```{r}
+
+#ggplot(ergebnisse) +
+  #geom_bar(aes(x = IsFerien, y = Durchschnittsumsatz, fill=IsFerien), stat="identity") +
+  #labs(title = "Mittlere Umsätze während der Ferien vs. Nicht-Ferien", x = "Ferien", y = "Umsatz") +
+ # theme_light() +
+ # geom_errorbar(aes(x=IsFerien, ymin=conf.low, ymax=conf.high), size=1.0, width=0.5, colour = "blue", alpha=1)
+```
+
+![](Abbildung2.png)
+
+
+## Missing Values
+
+```{r}
+#| echo: true
+
+# Untersuchen von Missing Values in jeder Spalte von train_data_combined
+missing_values_combined <- combined_data %>%
+  summarise(across(everything(), ~sum(is.na(.))))
+
+```
+
+![](missing_values_liste.png)
+.
+
+## Missing Data Profile
+
+![](md_profile.png)
+
+## Imputation Temperatur
+
+ - Jeweils 5 Werte vor und 5 Werte nach dem NA und dann den Mittelwert bilden
+
+```{r}
+#| echo: true
+
+# Funktion Imputation für Temperatur
+impute_knn <- function(data, column_name) {
+  # Neue Spalte für die imputierten Werte erstellen
+  data[[paste0(column_name, "_Imputated")]] <- data[[column_name]]
+  
+  for (i in 1:nrow(data)) {
+    if (is.na(data[[paste0(column_name, "_Imputated")]][i])) {
+      # Bereiche für vorherige und nachfolgende Werte definieren
+      range_start <- max(1, i - 5)
+      range_end <- min(nrow(data), i + 5)
+      
+      # Werte vor und nach dem NA-Wert extrahieren
+      values <- data[[paste0(column_name, "_Imputated")]][range_start:range_end]
+      
+      # NA-Werte aus diesen Werten ausschließen
+      values <- values[!is.na(values)]
+      
+      # Wenn es ausreichend viele Nicht-NA-Werte gibt, ersetzen
+      if (length(values) > 0) {
+        data[[paste0(column_name, "_Imputated")]][i] <- mean(values, na.rm = TRUE)
+      }
+    }
+  }
+  return(data)
+}
+
+```
+
+```{r}
+
+# Anwendung der Funktion auf den Datensatz combined_data
+combined_data <- impute_knn(combined_data, "Temperatur")
+
+```
+
+
+## Imputation Wind, Bewolkung & Wetter
+
+- Jeweils Vortagswert genutzt zur Imputation
+
+```{r}
+#| echo: true
+
+#Funktion
+impute_with_previous <- function(data, column_name) {
+  # Neue Spalte fuer imputierte Werte erstellen
+  data[[paste0(column_name, "_Imputated")]] <- data[[column_name]]
+  
+  # Iterieren ueber alle Zeilen, beginnend mit der zweiten Zeile
+  for (i in 2:nrow(data)) {
+    # Ueberprüfen, ob der aktuelle Wert NA ist
+    if (is.na(data[[paste0(column_name, "_Imputated")]][i])) {
+      # Ersetzen des NA-Wertes mit dem Wert der vorherigen Zeile
+      data[[paste0(column_name, "_Imputated")]][i] <- data[[paste0(column_name, "_Imputated")]][i-1]
+    }
+  }
+  
+  return(data)
+}
+
+```
+
+```{r}
+
+# Anwenden der Funktion auf Ihren Datensatz
+combined_data <- impute_with_previous(combined_data, "Bewoelkung")
+
+# Anwenden der Funktion auf die Spalte "Windgeschwindigkeit" im Datensatz
+combined_data <- impute_with_previous(combined_data, "Windgeschwindigkeit")
+
+# Applying the function to the "Wettercode" column in your dataset
+combined_data <- impute_with_previous(combined_data, "Wettercode")
+
+```
+
+```{r}
+
+ist_regen <- function(code) {
+return(code >= 50 & code <= 69 | code >= 80 & code <= 82 | code >= 91 & code <= 92 | code %in% c(95, 97))
+}
+
+combined_data <- combined_data %>%
+  mutate(Regen = sapply(Wettercode_Imputated, ist_regen))
+
+```
+
+## Lineares Modell
+
+
+```{r}
+
+combined_data <- combined_data %>%
+  mutate(
+    Warengruppe = as.factor(Warengruppe),
+    KielerWoche = as.factor(KielerWoche),
+    IsFerien = as.factor(IsFerien),
+    IsFeiertag = as.factor(IsFeiertag),
+    Wochentag = as.factor(Wochentag),
+    Bewoelkung_Imputated = as.factor(Bewoelkung_Imputated),
+  )
+
+# Create Trainingsdatensatz vom 01.07.2013 bis 31.12.2017
+train_data <- combined_data %>%
+  filter(Datum >= as.Date("2013-07-01") & Datum <= as.Date("2017-12-31"))
+
+# Create Validierungsdatensatz vom 01.01.2018 bis 31.07.2018
+validation_data <- combined_data %>%
+  filter(Datum >= as.Date("2018-01-01") & Datum <= as.Date("2018-07-31"))
+
+```
+
+
+```{r}
+#| echo: true
+#| #| output-location: fragment
+
+baseline_model <- lm(Umsatz ~ Warengruppe + KielerWoche  
+                       + IsFerien + IsFeiertag + 
+                       Wochentag + Temperatur_Imputated + Bewoelkung_Imputated + 
+                       Windgeschwindigkeit_Imputated + Regen , data = train_data)
+
+summary(baseline_model)
+
+```
+
+
+## Evaluation mit Validierungs-Datensatz
+
+```{r}
+# Make predictions on the validation dataset
+validation_predictions <- predict(baseline_model, newdata = validation_data)
+
+# MAE
+mae <- mae(validation_data$Umsatz, validation_predictions)
+
+# MSE
+mse <- mse(validation_data$Umsatz, validation_predictions)
+
+# RMSE
+rmse <- sqrt(mse)
+
+# Extract R-squared value
+r_squared <- 0.7224 
+
+# Calculate MAPE
+mape <- mean(abs((validation_data$Umsatz - validation_predictions) / validation_data$Umsatz)) * 100
+
+```
+
+
+| Metric     | Value         |
+|------------|---------------|
+| MAPE       | `r mape`      |
+| R-squared  | `r r_squared` |
+| MSE        | `r mse`       |
+| MAE        | `r mae`       |
+| RMSE       | `r rmse`      |
+
+
+
+## Neuronales Netz: Model 1
+
+![](nn_code_model1.png)
+
+## Neuronales Netz: Model 2
+
+![](nn_code_model2.png)
+
+## Neuronales Netz: Model 3
+
+![](nn_code_model3.png)
+
+## Loss Funktionen 
+
+![](model1_loss.png)
+
+## Mape Training & Validation
+
+![](mape_all_data.png)
+
+## Mape pro Warengruppe auf Validation
+
+![](mape_produkte.png)
+
+## Mape Testdaten
+
+![](mape_test)
+
+
+## Worst Fail
+
+- Lernratenplaner
+- Imputationsverfahren (zu wenig Zeit investiert)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
