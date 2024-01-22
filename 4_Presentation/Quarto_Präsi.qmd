@@ -473,7 +473,7 @@ mape <- mean(abs((validation_data$Umsatz - validation_predictions) / validation_
 
 ## Loss Funktionen 
 
-![](model_loss.png)
+![](model1_loss.png)
 
 ## Mape Training & Validation
 
