@@ -2,7 +2,7 @@
 
 ## Repository Link
 
-[<https://github.com/your_username/your_project_name>]
+[< https://github.com/Tomson909/SalesForecastingBakery >]
 
 ## Description
 
@@ -14,15 +14,15 @@ Regression
 
 ### Results Summary
 
--   **Best Model:** [Name of the best-performing model]
+-   **Best Model:** SSSeModell.ipynb
 -   **Evaluation Metric:** MAPE
 -   **Result by Category** (Identifier):
-    -   **Bread** (1): [XX]%
-    -   **Rolls** (2): [XX]%
-    -   **Croissant** (3): [XX]%
-    -   **Confectionery** (4): [XX]%
-    -   **Cake** (5): [XX]%
-    -   **Seasonal Bread** (6): [XX]%
+    -   **Bread** (1): 13.9 %
+    -   **Rolls** (2): 21.6  %
+    -   **Croissant** (3): 18.4 %
+    -   **Confectionery** (4): 22.4 %
+    -   **Cake** (5): 14.5 %
+    -   **Seasonal Bread** (6): 0 % (no datapoints, see presentation)
 
 ## Documentation
 
@@ -32,6 +32,4 @@ Regression
 5.  [**Model Definition and Evaluation**](3_Model/)
 6.  [**Presentation**](4_Presentation/README.md)
 
-## Cover Image
 
-![](CoverImage/cover_image.png)
