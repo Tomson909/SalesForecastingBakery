@@ -27,7 +27,7 @@ Regression
 ## Documentation
 
 1.  [**Data Import and Preparation**](0_DataPreperation/final_script.r)
-3.  [**Dataset Characteristics (Barcharts)**](1_DatasetCharacteristics/Data_basic_overview.Rmd)
+3.  [**Dataset Characteristics (Barcharts)**](1_DatasetCharacteristics/final_script.r)
 4.  [**Baseline Model**](2_BaselineModel/baseline_model_prep.R)
 5.  [**Model Definition and Evaluation**](3_Model/) #three different models on three complexety levels in this folder
 6.  [**Presentation**](4_Presentation/Quarto_Präsi.qmd)
