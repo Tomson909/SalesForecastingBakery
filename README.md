@@ -30,5 +30,5 @@ Regression
 3.  [**Dataset Characteristics (Barcharts)**](1_DatasetCharacteristics/final_script.r)
 4.  [**Baseline Model**](1_DatasetCharacteristics/final_script.r)
 5.  [**Model Definition and Evaluation**](3_Model/) #best model as notebook in this folder
-6.  [**Presentation**](4_Presentation/Quarto_Präsi.qmd)
+6.  [**Presentation**](4_Presentation/Quarto_Präsi.qmd) #presentation as powerpoint in the folder as well
 
