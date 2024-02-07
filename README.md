@@ -26,10 +26,9 @@ Regression
 
 ## Documentation
 
-1.  [**Data Import and Preparation**](0_DataPreparation/)
-3.  [**Dataset Characteristics (Barcharts)**](1_DatasetCharacteristics/)
-4.  [**Baseline Model**](2_BaselineModel/)
-5.  [**Model Definition and Evaluation**](3_Model/)
-6.  [**Presentation**](4_Presentation/README.md)
-
+1.  [**Data Import and Preparation**](0_DataPreperation/data_preperation_neural_network_wettercode)
+3.  [**Dataset Characteristics (Barcharts)**](1_DatasetCharacteristics/Data_basic_overview.Rmd)
+4.  [**Baseline Model**](2_BaselineModel/baseline_model_prep.R)
+5.  [**Model Definition and Evaluation**](3_Model/) #three different models on three complexety levels in this folder
+6.  [**Presentation**](4_Presentation/Quarto_Präsi.qmd)
 
