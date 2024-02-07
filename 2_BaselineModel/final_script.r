@@ -1,13 +1,5 @@
-###################################################
-#### Preparation of the Environment #####
-
-# Clear environment
-remove(list = ls())
-
-setwd("C:/Users/sunpn1013/Desktop/Neuer Ordner")
-
 # Create list with needed libraries
-pkgs <- c("readr", "dplyr", "reticulate", "ggplot2", "Metrics", "lubridate", "tidyverse", "VIM")
+pkgs <- c("purrr","DataExplorer","caret","Metrics","readr", "dplyr", "reticulate", "ggplot2", "Metrics", "lubridate", "tidyverse", "VIM","broom", "RColorBrewer")
 
 # Load each listed library and check if it is installed and install if necessary
 for (pkg in pkgs) {
@@ -17,64 +9,20 @@ for (pkg in pkgs) {
   }
 }
 
+setwd("C:/Users/sunpn1013/Desktop/Neuer Ordner")
 
 ######### Data Import #########
 
 # Read relevant data
 sales_data <- read_csv("train.csv")
-
-test_data <- read_csv("test.csv")
-
-
-
-######### Split Data Into Training and Validation Set #########
-
-# Create Trainingsdatensatz vom 01.07.2013 bis 31.07.2017
-train_data <- sales_data %>%
-  filter(Datum >= as.Date("2013-07-01") & Datum <= as.Date("2017-07-31"))
-
-# Create Validierungsdatensatz vom 01.08.2017 bis 31.07.2018
-validation_data <- sales_data %>%
-  filter(Datum >= as.Date("2017-08-01") & Datum <= as.Date("2018-07-31"))
-
-summary(train_data)
-
-summary(validation_data)
-
-
-######### Add Feature Variables  #########
-
-#Kiwo Daten
 kiwo_data <- read.csv("kiwo.csv")
-# Convert "Datum" column to Date format
-kiwo_data$Datum <- as.Date(kiwo_data$Datum, format = "%Y-%m-%d")
-
-#Ferien Daten
 ferien_data <- read_csv("ferien.csv")
-
-#Wetter Daten
 weather_data <- read_csv("wetter.csv")
 
+# Convert "Datum" column to Date format in kiwo_data
 
+kiwo_data$Datum <- as.Date(kiwo_data$Datum, format = "%Y-%m-%d")
 
-# Join fÃ¼r train_data
-train_data_combined <- train_data %>%
-  left_join(kiwo_data, by = "Datum") %>%
-  left_join(weather_data, by = "Datum") %>%
-  left_join(ferien_data, by = "Datum")
-
-# Join fÃ¼r validation_data
-validation_data_combined <- validation_data %>%
-  left_join(kiwo_data, by = "Datum") %>%
-  left_join(weather_data, by = "Datum") %>%
-  left_join(ferien_data, by = "Datum")
-
-
-# Join fÃ¼r test_data
-test_data_combined <- test_data %>%
-  left_join(kiwo_data, by = "Datum") %>%
-  left_join(weather_data, by = "Datum") %>%
-  left_join(ferien_data, by = "Datum")
 
 
 # Create a vector of public holidays for Schleswig-Holstein (2013-2018), including Dec 24th and Dec 31st
@@ -96,159 +44,259 @@ schleswig_holstein_feiertage <- as.Date(c(
 
 
 
-# Add a holiday column to train_data
-train_data_combined <- train_data_combined %>%
-  mutate(IsFeiertag = ymd(Datum) %in% schleswig_holstein_feiertage)
+######### Add Feature Variables  #########
 
-# Add a holiday column to validation_data
-validation_data_combined <- validation_data_combined %>%
-  mutate(IsFeiertag = ymd(Datum) %in% schleswig_holstein_feiertage)
-
-# Add a holiday column to test_data
-test_data_combined <- test_data_combined %>%
-  mutate(IsFeiertag = ymd(Datum) %in% schleswig_holstein_feiertage)
-
-
-#Create Variable for Weekdays to train_data
-train_data_combined <- train_data_combined %>%
+# General processing for the whole sales_data
+combined_data <- sales_data %>%
+  left_join(kiwo_data, by = "Datum") %>%
+  left_join(weather_data, by = "Datum") %>%
+  left_join(ferien_data, by = "Datum") %>%
   mutate(
-    Datum = as.Date(Datum),
-    Wochentag = weekdays(Datum, abbreviate = FALSE)
+    IsFeiertag = ymd(Datum) %in% schleswig_holstein_feiertage,
+    Wochentag = weekdays(Datum, abbreviate = FALSE),
+    KielerWoche = if_else(is.na(KielerWoche), FALSE, KielerWoche == 1)
   )
 
-#Create Variable for Weekdays to validation_data
-validation_data_combined <- validation_data_combined %>%
-  mutate(
-    Datum = as.Date(Datum),
-    Wochentag = weekdays(Datum, abbreviate = FALSE)
-  )
+# Mapping of Warengruppe to product name. 1=Brot; 2=Broetchen; 3=Croissant;4=Konditorei;5=Kuchen;6=Saisonbrot.
+combined_data <- combined_data %>%
+  mutate(Produktname = case_when(Warengruppe == 1 ~ "Brot",
+                                 Warengruppe == 2 ~ "Broetchen",
+                                 Warengruppe == 3 ~ "Croissant",
+                                 Warengruppe == 4 ~ "Konditorei",
+                                 Warengruppe == 5 ~ "Kuchen",
+                                 Warengruppe == 6 ~ "Saisonbrot"))
 
-#Create Variable for Weekdays to test_data
-test_data_combined <- test_data_combined %>%
-  mutate(
-    Datum = as.Date(Datum),
-    Wochentag = weekdays(Datum, abbreviate = FALSE)
-  )
+# Sortiert den Datensatz nach dem Datum aufsteigend
+combined_data <- combined_data %>% arrange(Datum)
 
 
-#Kieler Woche as Logical Vector for train_data
-train_data_combined <- train_data_combined %>%
-  mutate(KielerWoche = if_else(is.na(KielerWoche), FALSE, KielerWoche == 1))
-
-#Kieler Woche as Logical Vector for validation_data
-validation_data_combined <- validation_data_combined  %>%
-  mutate(KielerWoche = if_else(is.na(KielerWoche), FALSE, KielerWoche == 1))
-
-#Kieler Woche as Logical Vector for test_data
-test_data_combined <- test_data_combined  %>%
-  mutate(KielerWoche = if_else(is.na(KielerWoche), FALSE, KielerWoche == 1))
 
 
-# Create Regenvariable
-# Funktion, um zu prüfen, ob ein Wettercode Regen darstellt
-#ist_regen <- function(code) {
-# return(code >= 50 & code <= 69 | code >= 80 & code <= 82 | code >= 91 & code <= 92 | code %in% c(95, 97))
-#}
-
-#Add to train_data
-#train_data_combined <- train_data_combined %>%
-# mutate(Regen = sapply(Wettercode, ist_regen))
-
-#Add to validation_data
-#validation_data_combined <- validation_data_combined %>%
-#  mutate(Regen = sapply(Wettercode, ist_regen))
-
-#Add to test_data
 
 
-######### Abbildungen #########
+######### Abbildungen  #########
 
-#Zusammenhang Ferien und Umsatz
-# Erstelle einen Boxplot
-ggplot(train_data_combined, aes(x = IsFerien, y = Umsatz, fill = IsFerien)) +
+ggplot(combined_data, aes(x = IsFerien, y = Umsatz, fill = IsFerien)) +
   geom_boxplot() +
-  labs(title = "Umsatz während Ferien und Nicht-Ferien", x = "IsFerien", y = "Umsatz") +
+  labs(title = "Umsatz w?hrend Ferien und Nicht-Ferien", x = "IsFerien", y = "Umsatz") +
   theme_minimal()
 
 
-######### MISSING VALUES - Part 1 #########
+#Zusammenhang Regen und Umsatz
+# Erstelle einen Boxplot
+#ggplot(combined_data, aes(x = Regen, y = Umsatz, fill = IsRegen)) +
+# geom_boxplot() +
+# labs(title = "Umsatz beinflusst durch Regen?", x = "Regen", y = "Umsatz") +
+#theme_minimal()
 
-# Entferne der Variable "Wettercode" aus dem Datensatz "combined_data" [hat sehr viele NA]
-train_data_combined <- train_data_combined %>% select(-Wettercode)
+
+#Mittelwert von Ferientag vs. Nicht-Ferientag
+Durchschnitt_Wochentag <- combined_data %>%
+  group_by(Wochentag) %>%
+  summarize(Durchschnittsumsatz = mean(Umsatz))
+
+Konfidenz_Wochentag <- combined_data %>%
+  group_by(Wochentag) %>%
+  do(tidy(t.test(.$Umsatz)))
+
+Zusammengef?gte_Ergebnisse <- merge(Durchschnitt_Wochentag, Konfidenz_Wochentag, by= "Wochentag")
 
 
-# Entferne der Variable "Wettercode" aus dem Datensatz "combined_data" [hat sehr viele NA]
-validation_data_combined <- validation_data_combined %>% select(-Wettercode)
 
-# Entferne der Variable "Wettercode" aus dem Datensatz "test_data" [hat sehr viele NA]
-test_data_combined <- test_data_combined %>% select(-Wettercode)
+bar_colors <- c("#e6194B", "#3cb44b", "#ffe119", "#4363d8", "#f58231", "#911eb4", "#46f0f0", "#f032e6", "#bcf60c", "#fabebe", "#008080", "#e6beff", "#9a6324", "#fffac8", "#800000", "#aaffc3", "#808000", "#ffd8b1", "#000075", "#808080", "#ffffff", "#000000")
+
+
+# Plotten der Daten: Abh?ngigkeit der Variablen von Umsatz
+ggplot(Zusammengef?gte_Ergebnisse) +
+  geom_bar(aes(x = Wochentag, y = Durchschnittsumsatz, fill = Wochentag), stat = "identity") +
+  labs(title = "Mittlere Ums?tze der Wochentage", x = "Ferien", y = "Umsatz") +
+  theme_dark() +  # ?ndere das Theme zu einem dunklen Hintergrund
+  scale_fill_manual(values = bar_colors) +  # Verwende die definierte Farbpalette
+  geom_errorbar(aes(x = Wochentag, ymin = conf.low, ymax = conf.high), size = 1.0, width = 0.5, colour = "white", alpha = 1) +
+  theme(
+    panel.background = element_rect(fill = "grey"),  # Hintergrundfarbe des Plots
+    panel.grid.major = element_blank(),  # Kein Gitter
+    panel.grid.minor = element_blank(),  # Kein Gitter
+    axis.text = element_text(color = "black"),  # Textfarbe der Achsenbeschriftungen
+    axis.title = element_text(color = "black"),  # Textfarbe der Achsentitel
+    legend.text = element_text(color = "black"),  # Textfarbe der Legende
+    legend.title = element_text(color = "black")  # Textfarbe des Legendentitels
+  )
+
+
+######### MISSING VALUES  #########
+
+#Darstellung der Missing Values
+
+create_report(combined_data)
 
 
 # Untersuchen von Missing Values in jeder Spalte von train_data_combined
-missing_values_train <- train_data_combined %>%
+missing_values_combined <- combined_data %>%
   summarise(across(everything(), ~sum(is.na(.))))
 
 # Anzeigen des Ergebnisses
-print(missing_values_train)
+print(missing_values_combined)
 
 
-# Untersuchen von Missing Values in jeder Spalte von validation_data_combined
-missing_values_validation <- validation_data_combined %>%
+###### KNN f?r Temperatur ########
+
+# Funktion f?r KNN-basierte Imputation
+impute_knn <- function(data, column_name) {
+  # Neue Spalte f?r die imputierten Werte erstellen
+  data[[paste0(column_name, "_Imputated")]] <- data[[column_name]]
+
+  for (i in 1:nrow(data)) {
+    if (is.na(data[[paste0(column_name, "_Imputated")]][i])) {
+      # Bereiche f?r vorherige und nachfolgende Werte definieren
+      range_start <- max(1, i - 5)
+      range_end <- min(nrow(data), i + 5)
+
+      # Werte vor und nach dem NA-Wert extrahieren
+      values <- data[[paste0(column_name, "_Imputated")]][range_start:range_end]
+
+      # NA-Werte aus diesen Werten ausschlie?en
+      values <- values[!is.na(values)]
+
+      # Wenn es ausreichend viele Nicht-NA-Werte gibt, ersetzen
+      if (length(values) > 0) {
+        data[[paste0(column_name, "_Imputated")]][i] <- mean(values, na.rm = TRUE)
+      }
+    }
+  }
+  return(data)
+}
+
+# Anwendung der Funktion auf den Datensatz combined_data
+combined_data <- impute_knn(combined_data, "Temperatur")
+
+
+# Untersuchen von Missing Values in jeder Spalte von train_data_combined
+missing_values_combined <- combined_data %>%
   summarise(across(everything(), ~sum(is.na(.))))
 
 # Anzeigen des Ergebnisses
-print(missing_values_validation)
+print(missing_values_combined)
 
 
-# Untersuchen von Missing Values in jeder Spalte von test_data_combined
-missing_values_test <- test_data_combined %>%
+##### Imputation Bewoelkung #####
+
+impute_with_previous <- function(data, column_name) {
+  # Neue Spalte f?r imputierte Werte erstellen
+  data[[paste0(column_name, "_Imputated")]] <- data[[column_name]]
+
+  # Iterieren ?ber alle Zeilen, beginnend mit der zweiten Zeile
+  for (i in 2:nrow(data)) {
+    # ?berpr?fen, ob der aktuelle Wert NA ist
+    if (is.na(data[[paste0(column_name, "_Imputated")]][i])) {
+      # Ersetzen des NA-Wertes mit dem Wert der vorherigen Zeile
+      data[[paste0(column_name, "_Imputated")]][i] <- data[[paste0(column_name, "_Imputated")]][i-1]
+    }
+  }
+
+  return(data)
+}
+
+# Anwenden der Funktion auf Ihren Datensatz
+combined_data <- impute_with_previous(combined_data, "Bewoelkung")
+
+# Untersuchen von Missing Values in jeder Spalte von train_data_combined
+missing_values_combined <- combined_data %>%
   summarise(across(everything(), ~sum(is.na(.))))
 
 # Anzeigen des Ergebnisses
-print(missing_values_test)
+print(missing_values_combined)
+
+
+##### Imputation Windgeschwindigkeit #####
+
+# Anwenden der Funktion auf die Spalte "Windgeschwindigkeit" im Datensatz
+combined_data <- impute_with_previous(combined_data, "Windgeschwindigkeit")
 
 
 
-# Entfernen aller Zeilen mit mindestens einem NA aus train_data
-train_data_combined <- na.omit(train_data_combined)
+##### Imputation Wettercode #####
 
-# Entfernen aller Zeilen mit mindestens einem NA aus validation_data
-validation_data_combined <- na.omit(validation_data_combined)
+# Applying the function to the "Wettercode" column in your dataset
+combined_data <- impute_with_previous(combined_data, "Wettercode")
 
-# Entfernen aller Zeilen mit mindestens einem NA aus test_data
-test_data_combined <- na.omit(test_data_combined)
+# Untersuchen von Missing Values in jeder Spalte von train_data_combined
+missing_values_combined <- combined_data %>%
+  summarise(across(everything(), ~sum(is.na(.))))
 
+# Anzeigen des Ergebnisses
+print(missing_values_combined)
 
-###################################################
-### Data Preparation for Tensor Flow ####
+# Jetzt kann die Variable Regen erstellt werden
 
+# Create Regenvariable
+# Funktion, um zu pr?fen, ob ein Wettercode Regen darstellt
+funktion_regen <- function(code) {
+  return(code >= 50 & code <= 69 | code >= 80 & code <= 82 | code >= 91 & code <= 92 | code %in% c(95, 97))
+}
 
-# Umwandlung der kategorialen Variablen in Faktoren
-
-# Train_Data
-
-train_data_combined$Warengruppe <- as.factor(train_data_combined$Warengruppe)
-train_data_combined$KielerWoche <- as.factor(train_data_combined$KielerWoche)
-train_data_combined$IsFerien <- as.factor(train_data_combined$IsFerien)
-train_data_combined$IsFeiertag <- as.factor(train_data_combined$IsFeiertag)
-train_data_combined$Wochentag <- as.factor(train_data_combined$Wochentag)
-
-#Validation_Data
-
-validation_data_combined$Warengruppe <- as.factor(validation_data_combined$Warengruppe)
-validation_data_combined$KielerWoche <- as.factor(validation_data_combined$KielerWoche)
-validation_data_combined$IsFerien <- as.factor(validation_data_combined$IsFerien)
-validation_data_combined$IsFeiertag <- as.factor(validation_data_combined$IsFeiertag)
-validation_data_combined$Wochentag <- as.factor(validation_data_combined$Wochentag)
+combined_data <- combined_data %>%
+  mutate(Regen = sapply(Wettercode_Imputated, funktion_regen))
 
 
-#Test_Data
 
-test_data_combined$Warengruppe <- as.factor(test_data_combined$Warengruppe)
-test_data_combined$KielerWoche <- as.factor(test_data_combined$KielerWoche)
-test_data_combined$IsFerien <- as.factor(test_data_combined$IsFerien)
-test_data_combined$IsFeiertag <- as.factor(test_data_combined$IsFeiertag)
-test_data_combined$Wochentag <- as.factor(test_data_combined$Wochentag)
+#combined_data <- combined_data %>% mutate(Bewoelkung = replace_na(Bewoelkung, 0))
+
+#combined_data <- combined_data %>%
+# mutate(Windgeschwindigkeit = if_else(is.na(Windgeschwindigkeit), 0, Windgeschwindigkeit))
+
+#combined_data <- combined_data %>%
+# mutate(Temperatur = if_else(is.na(Temperatur), 0, Temperatur))
+
+#combined_data <- combined_data %>%
+# mutate(Wettercode = if_else(is.na(Wettercode), 0, Wettercode))
+
+
+# Untersuchen von Missing Values in jeder Spalte von train_data_combined
+missing_values_combined <- combined_data %>%
+  summarise(across(everything(), ~sum(is.na(.))))
+
+# Anzeigen des Ergebnisses
+print(missing_values_combined)
+
+
+
+# Entferne der Variable "Wettercode" aus dem Datensatz "combined_data" [hat sehr viele NA]
+#combined_data <- combined_data %>% select(-Wettercode)
+
+# Entfernen aller Zeilen mit mindestens einem NA aus combined_data
+#combined_data <- na.omit(combined_data)
+
+# Untersuchen von Missing Values in jeder Spalte von train_data_combined
+#missing_values_combined <- combined_data %>%
+# summarise(across(everything(), ~sum(is.na(.))))
+
+# Anzeigen des Ergebnisses
+#print(missing_values_combined)
+
+######### Faktorisierung der Variablen  #########
+
+combined_data <- combined_data %>%
+  mutate(
+    Warengruppe = as.factor(Warengruppe),
+    KielerWoche = as.factor(KielerWoche),
+    IsFerien = as.factor(IsFerien),
+    IsFeiertag = as.factor(IsFeiertag),
+    Wochentag = as.factor(Wochentag),
+    Bewoelkung_Imputated = as.factor(Bewoelkung_Imputated),
+  )
+
+######### Split Data Into Training and Validation Set #########
+
+# Create Trainingsdatensatz vom 01.07.2013 bis 31.12.2017
+train_data <- combined_data %>%
+  filter(Datum >= as.Date("2013-07-01") & Datum <= as.Date("2017-12-31"))
+
+
+# Create Validierungsdatensatz vom 01.01.2018 bis 31.07.2018
+validation_data <- combined_data %>%
+  filter(Datum >= as.Date("2018-01-01") & Datum <= as.Date("2018-07-31"))
+
 
 ######### LINEARES MODEL  #########
 
@@ -256,9 +304,10 @@ test_data_combined$Wochentag <- as.factor(test_data_combined$Wochentag)
 
 #Ohne Wettercode, da es Probleme mit den Stufen gibt
 
-baseline_model <- lm(Umsatz ~ Warengruppe + KielerWoche + Temperatur
-                     + Windgeschwindigkeit + IsFerien + IsFeiertag +
-                       Wochentag, data = train_data_combined)
+baseline_model <- lm(Umsatz ~ Warengruppe + KielerWoche
+                     + IsFerien + IsFeiertag +
+                       Wochentag + Temperatur_Imputated + Bewoelkung_Imputated +
+                       Windgeschwindigkeit_Imputated + Regen , data = train_data)
 
 summary(baseline_model)
 
@@ -266,70 +315,59 @@ summary(baseline_model)
 # Evaluation with validation
 
 # Make predictions on the validation dataset
-validation_predictions <- predict(baseline_model, newdata = validation_data_combined)
+validation_predictions <- predict(baseline_model, newdata = validation_data)
 
 # MAE
-mae <- mae(validation_data_combined$Umsatz, validation_predictions)
+mae <- mae(validation_data$Umsatz, validation_predictions)
 
 # MSE
-mse <- mse(validation_data_combined$Umsatz, validation_predictions)
+mse <- mse(validation_data$Umsatz, validation_predictions)
 
 # RMSE
 rmse <- sqrt(mse)
 
 # R-squared
-r_squared <- cor(validation_data_combined$Umsatz, validation_predictions)^2
+r_squared <- cor(validation_data$Umsatz, validation_predictions)^2
 
 # Calculate MAPE
-mape <- mean(abs((validation_data_combined$Umsatz - validation_predictions) / validation_data_combined$Umsatz)) * 100
+mape <- mean(abs((validation_data$Umsatz - validation_predictions) / validation_data$Umsatz)) * 100
 
 
-######### MISSING VALUES - Part 2 - Imputation #########
-
-# Hier kÃ¶nnen wir die Imputationsverfahren ausprobieren. DafÃ¼r dÃ¼rfen wir vorher natÃ¼rlich keine NA rauswerfen
-
+######### AUFBEREITUNG FUER TENSOR FLOW  #########
 
 ######### ONE-HOT-ENCODING #########
 
 
-#Erstellen der Dummy-Variablen und HinzufÃ¼gen der numerischen Variablen
-features_matrix_train <- model.matrix(Umsatz ~ Warengruppe + KielerWoche + Temperatur + Windgeschwindigkeit + IsFerien + IsFeiertag + Wochentag, data=train_data_combined)
+#Erstellen der Dummy-Variablen und Hinzufügen der numerischen Variablen
+features_matrix_train <- model.matrix(~Warengruppe + KielerWoche
+                                      + IsFerien + IsFeiertag +
+                                        Wochentag + Temperatur_Imputated + Bewoelkung_Imputated +
+                                        Windgeschwindigkeit_Imputated + Regen, data=train_data)
 
 #Umwandlung in ein tibble
 features_train <- as_tibble(features_matrix_train)
 
-# Entfernt die erste Spalte, die den Intercept darstellt
-#features_train <- features_train[, -1]
 
 
-# Erstellen der Dummy-Variablen und HinzufÃ¼gen der numerischen Variablen fÃ¼r validation_data_combined
-features_matrix_validation <- model.matrix(Umsatz ~ Warengruppe + KielerWoche + Temperatur + Windgeschwindigkeit + IsFerien + IsFeiertag + Wochentag, data=validation_data_combined)
+#Erstellen der Dummy-Variablen und Hinzufügen der numerischen Variablen
+features_matrix_validation <- model.matrix(~ Warengruppe + KielerWoche
+                                           + IsFerien + IsFeiertag +
+                                             Wochentag + Temperatur_Imputated + Bewoelkung_Imputated +
+                                             Windgeschwindigkeit_Imputated + Regen, data=validation_data)
 
-# Umwandlung in ein tibble
+#Umwandlung in ein tibble
 features_validation <- as_tibble(features_matrix_validation)
 
 
-# Entfernt die erste Spalte, die den Intercept darstellt
-#features_validation <- features_test[, -1]
-
-
-# Erstellen der Dummy-Variablen und HinzufÃ¼gen der numerischen Variablen fÃ¼r validation_data_combined
-features_matrix_test <- model.matrix(~ Warengruppe + KielerWoche + Temperatur + Windgeschwindigkeit + IsFerien + IsFeiertag + Wochentag, data=test_data_combined)
-
-# Umwandlung in ein tibble
-features_test <- as_tibble(features_matrix_test)
-
-
-# Erstellen des label_train Tibbles aus der Umsatz-Spalte von train_data_combined
-label_train <- train_data_combined %>%
+#label f?r train_data
+label_train <- train_data %>%
   select(Umsatz) %>%
   rename(label = Umsatz) %>%
   as_tibble()
 
 
-
-# Erstellen des label_train Tibbles aus der Umsatz-Spalte von train_data_combined
-label_validation <- validation_data_combined %>%
+#label f?r validation_data
+label_validation <- validation_data %>%
   select(Umsatz) %>%
   rename(label = Umsatz) %>%
   as_tibble()
@@ -341,27 +379,156 @@ cat("Training features dimensions:", dim(features_train), "\n")
 cat("Training labels dimensions:", dim(label_train), "\n")
 cat("Validation labels dimensions:", dim(label_validation), "\n")
 cat("Validation features dimensions:", dim(features_validation), "\n")
-cat("Test features dimensions:", dim(features_test), "\n")
+
 
 
 ######### Export Data Sets for Tensor-Flow #########
 
 # Exportieren von features_train als CSV
-write.csv(features_train, "features_train_1701.csv", row.names = FALSE)
+write.csv(features_train, "features_train_regen.csv", row.names = FALSE)
 
 # Exportieren von label_train als CSV
-write.csv(label_train, "label_train_1701.csv", row.names = FALSE)
+write.csv(label_train, "label_train_regen.csv", row.names = FALSE)
 
 # Exportieren von label_validation als CSV
-write.csv(label_validation, "label_validation_1701.csv", row.names = FALSE)
+write.csv(label_validation, "label_validation_regen.csv", row.names = FALSE)
 
 # Exportieren von features_validation als CSV
-write.csv(features_validation, "features_validation_1701.csv", row.names = FALSE)
-
-# Exportieren von features_test als CSV
-write.csv(features_test, "features_test_1701.csv", row.names = FALSE)
+write.csv(features_validation, "features_validation_regen.csv", row.names = FALSE)
 
 
-#Exportieren von test_data_combined fÃ¼r die IDs
-write.csv(test_data_combined, "test_data_IDs_1701.csv", row.names = FALSE)
+######################################## Data Prep for test_data #######################################
+
+test_data <- read_csv("test.csv")
+
+# General processing for the whole sales_data
+test_data <- test_data %>%
+  left_join(kiwo_data, by = "Datum") %>%
+  left_join(weather_data, by = "Datum") %>%
+  left_join(ferien_data, by = "Datum") %>%
+  mutate(
+    IsFeiertag = ymd(Datum) %in% schleswig_holstein_feiertage,
+    Wochentag = weekdays(Datum, abbreviate = FALSE),
+    KielerWoche = if_else(is.na(KielerWoche), FALSE, KielerWoche == 1)
+  )
+
+# Mapping of Warengruppe to product name. 1=Brot; 2=Broetchen; 3=Croissant;4=Konditorei;5=Kuchen;6=Saisonbrot.
+test_data <- test_data %>%
+  mutate(Produktname = case_when(Warengruppe == 1 ~ "Brot",
+                                 Warengruppe == 2 ~ "Broetchen",
+                                 Warengruppe == 3 ~ "Croissant",
+                                 Warengruppe == 4 ~ "Konditorei",
+                                 Warengruppe == 5 ~ "Kuchen",
+                                 Warengruppe == 6 ~ "Saisonbrot"))
+
+
+#Darstellung der Missing Values
+
+###### KNN f?r Temperatur ########
+
+# Funktion f?r KNN-basierte Imputation
+impute_knn <- function(data, column_name) {
+  # Neue Spalte f?r die imputierten Werte erstellen
+  data[[paste0(column_name, "_Imputated")]] <- data[[column_name]]
+
+  for (i in 1:nrow(data)) {
+    if (is.na(data[[paste0(column_name, "_Imputated")]][i])) {
+      # Bereiche f?r vorherige und nachfolgende Werte definieren
+      range_start <- max(1, i - 5)
+      range_end <- min(nrow(data), i + 5)
+
+      # Werte vor und nach dem NA-Wert extrahieren
+      values <- data[[paste0(column_name, "_Imputated")]][range_start:range_end]
+
+      # NA-Werte aus diesen Werten ausschlie?en
+      values <- values[!is.na(values)]
+
+      # Wenn es ausreichend viele Nicht-NA-Werte gibt, ersetzen
+      if (length(values) > 0) {
+        data[[paste0(column_name, "_Imputated")]][i] <- mean(values, na.rm = TRUE)
+      }
+    }
+  }
+  return(data)
+}
+
+# Anwendung der Funktion auf den Datensatz combined_data
+test_data <- impute_knn(test_data, "Temperatur")
+
+
+##### Imputation Bewoelkung #####
+
+impute_with_previous <- function(data, column_name) {
+  # Neue Spalte f?r imputierte Werte erstellen
+  data[[paste0(column_name, "_Imputated")]] <- data[[column_name]]
+
+  # Iterieren ?ber alle Zeilen, beginnend mit der zweiten Zeile
+  for (i in 2:nrow(data)) {
+    # ?berpr?fen, ob der aktuelle Wert NA ist
+    if (is.na(data[[paste0(column_name, "_Imputated")]][i])) {
+      # Ersetzen des NA-Wertes mit dem Wert der vorherigen Zeile
+      data[[paste0(column_name, "_Imputated")]][i] <- data[[paste0(column_name, "_Imputated")]][i-1]
+    }
+  }
+
+  return(data)
+}
+
+# Anwenden der Funktion auf Ihren Datensatz
+test_data <- impute_with_previous(test_data, "Bewoelkung")
+
+##### Imputation Windgeschwindigkeit #####
+
+# Anwenden der Funktion auf die Spalte "Windgeschwindigkeit" im Datensatz
+test_data <- impute_with_previous(test_data, "Windgeschwindigkeit")
+
+# Anwenden der Funktion auf die Spalte "Wettercode" im Datensatz
+test_data <- impute_with_previous(test_data, "Wettercode")
+
+#Regen-Variable hinzuf?gen
+test_data <- test_data %>%
+  mutate(Regen = sapply(Wettercode_Imputated, funktion_regen))
+
+
+######### Faktorisierung der Variablen  #########
+
+test_data <- test_data %>%
+  mutate(
+    Warengruppe = as.factor(Warengruppe),
+    KielerWoche = as.factor(KielerWoche),
+    IsFerien = as.factor(IsFerien),
+    IsFeiertag = as.factor(IsFeiertag),
+    Wochentag = as.factor(Wochentag),
+    Bewoelkung_Imputated = as.factor(Bewoelkung_Imputated)
+  )
+
+
+#Erstellen der Dummy-Variablen und Hinzufügen der numerischen Variablen
+features_matrix_test <- model.matrix(~ Warengruppe + KielerWoche
+                                     + IsFerien + IsFeiertag +
+                                       Wochentag + Temperatur_Imputated + Bewoelkung_Imputated +
+                                       Windgeschwindigkeit_Imputated + Regen, data=test_data)
+
+
+#Umwandlung in ein tibble
+features_test <- as_tibble(features_matrix_test)
+
+
+
+cat("Test features dimensions:", dim(features_test), "\n")
+
+# Check the dimensions of the dataframes
+cat("Training features dimensions:", dim(features_train), "\n")
+cat("Training labels dimensions:", dim(label_train), "\n")
+cat("Validation labels dimensions:", dim(label_validation), "\n")
+cat("Validation features dimensions:", dim(features_validation), "\n")
+
+
+#Exportieren von features_test als CSV
+write.csv(features_test, "features_test_regen.csv", row.names = FALSE)
+
+
+#Exportieren von test_data_combined für die IDs
+write.csv(test_data, "test_data_IDs_regen.csv", row.names = FALSE)
+
 

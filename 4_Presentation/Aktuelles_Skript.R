@@ -44,7 +44,7 @@ schleswig_holstein_feiertage <- as.Date(c(
 
 
 
-######### Add Feature Variables  ######### 
+######### Add Feature Variables  #########
 
 # General processing for the whole sales_data
 combined_data <- sales_data %>%
@@ -78,7 +78,7 @@ combined_data <- combined_data %>% arrange(Datum)
 
 ggplot(combined_data, aes(x = IsFerien, y = Umsatz, fill = IsFerien)) +
   geom_boxplot() +
-  labs(title = "Umsatz während Ferien und Nicht-Ferien", x = "IsFerien", y = "Umsatz") +
+  labs(title = "Umsatz w?hrend Ferien und Nicht-Ferien", x = "IsFerien", y = "Umsatz") +
   theme_minimal()
 
 
@@ -99,18 +99,18 @@ Konfidenz_Wochentag <- combined_data %>%
   group_by(Wochentag) %>%
   do(tidy(t.test(.$Umsatz)))
 
-Zusammengefügte_Ergebnisse <- merge(Durchschnitt_Wochentag, Konfidenz_Wochentag, by= "Wochentag")
+Zusammengef?gte_Ergebnisse <- merge(Durchschnitt_Wochentag, Konfidenz_Wochentag, by= "Wochentag")
 
 
 
 bar_colors <- c("#e6194B", "#3cb44b", "#ffe119", "#4363d8", "#f58231", "#911eb4", "#46f0f0", "#f032e6", "#bcf60c", "#fabebe", "#008080", "#e6beff", "#9a6324", "#fffac8", "#800000", "#aaffc3", "#808000", "#ffd8b1", "#000075", "#808080", "#ffffff", "#000000")
 
 
-# Plotten der Daten: Abhängigkeit der Variablen von Umsatz
-ggplot(Zusammengefügte_Ergebnisse) +
+# Plotten der Daten: Abh?ngigkeit der Variablen von Umsatz
+ggplot(Zusammengef?gte_Ergebnisse) +
   geom_bar(aes(x = Wochentag, y = Durchschnittsumsatz, fill = Wochentag), stat = "identity") +
-  labs(title = "Mittlere Umsätze der Wochentage", x = "Ferien", y = "Umsatz") +
-  theme_dark() +  # Ändere das Theme zu einem dunklen Hintergrund
+  labs(title = "Mittlere Ums?tze der Wochentage", x = "Ferien", y = "Umsatz") +
+  theme_dark() +  # ?ndere das Theme zu einem dunklen Hintergrund
   scale_fill_manual(values = bar_colors) +  # Verwende die definierte Farbpalette
   geom_errorbar(aes(x = Wochentag, ymin = conf.low, ymax = conf.high), size = 1.0, width = 0.5, colour = "white", alpha = 1) +
   theme(
@@ -139,25 +139,25 @@ missing_values_combined <- combined_data %>%
 print(missing_values_combined)
 
 
-###### KNN für Temperatur ########
+###### KNN f?r Temperatur ########
 
-# Funktion für KNN-basierte Imputation
+# Funktion f?r KNN-basierte Imputation
 impute_knn <- function(data, column_name) {
-  # Neue Spalte für die imputierten Werte erstellen
+  # Neue Spalte f?r die imputierten Werte erstellen
   data[[paste0(column_name, "_Imputated")]] <- data[[column_name]]
-  
+
   for (i in 1:nrow(data)) {
     if (is.na(data[[paste0(column_name, "_Imputated")]][i])) {
-      # Bereiche für vorherige und nachfolgende Werte definieren
+      # Bereiche f?r vorherige und nachfolgende Werte definieren
       range_start <- max(1, i - 5)
       range_end <- min(nrow(data), i + 5)
-      
+
       # Werte vor und nach dem NA-Wert extrahieren
       values <- data[[paste0(column_name, "_Imputated")]][range_start:range_end]
-      
-      # NA-Werte aus diesen Werten ausschließen
+
+      # NA-Werte aus diesen Werten ausschlie?en
       values <- values[!is.na(values)]
-      
+
       # Wenn es ausreichend viele Nicht-NA-Werte gibt, ersetzen
       if (length(values) > 0) {
         data[[paste0(column_name, "_Imputated")]][i] <- mean(values, na.rm = TRUE)
@@ -182,18 +182,18 @@ print(missing_values_combined)
 ##### Imputation Bewoelkung #####
 
 impute_with_previous <- function(data, column_name) {
-  # Neue Spalte für imputierte Werte erstellen
+  # Neue Spalte f?r imputierte Werte erstellen
   data[[paste0(column_name, "_Imputated")]] <- data[[column_name]]
-  
-  # Iterieren über alle Zeilen, beginnend mit der zweiten Zeile
+
+  # Iterieren ?ber alle Zeilen, beginnend mit der zweiten Zeile
   for (i in 2:nrow(data)) {
-    # Überprüfen, ob der aktuelle Wert NA ist
+    # ?berpr?fen, ob der aktuelle Wert NA ist
     if (is.na(data[[paste0(column_name, "_Imputated")]][i])) {
       # Ersetzen des NA-Wertes mit dem Wert der vorherigen Zeile
       data[[paste0(column_name, "_Imputated")]][i] <- data[[paste0(column_name, "_Imputated")]][i-1]
     }
   }
-  
+
   return(data)
 }
 
@@ -230,13 +230,13 @@ print(missing_values_combined)
 # Jetzt kann die Variable Regen erstellt werden
 
 # Create Regenvariable
-# Funktion, um zu prüfen, ob ein Wettercode Regen darstellt
+# Funktion, um zu pr?fen, ob ein Wettercode Regen darstellt
 funktion_regen <- function(code) {
-return(code >= 50 & code <= 69 | code >= 80 & code <= 82 | code >= 91 & code <= 92 | code %in% c(95, 97))
+  return(code >= 50 & code <= 69 | code >= 80 & code <= 82 | code >= 91 & code <= 92 | code %in% c(95, 97))
 }
 
 combined_data <- combined_data %>%
- mutate(Regen = sapply(Wettercode_Imputated, funktion_regen))
+  mutate(Regen = sapply(Wettercode_Imputated, funktion_regen))
 
 
 
@@ -269,7 +269,7 @@ print(missing_values_combined)
 
 # Untersuchen von Missing Values in jeder Spalte von train_data_combined
 #missing_values_combined <- combined_data %>%
- # summarise(across(everything(), ~sum(is.na(.))))
+# summarise(across(everything(), ~sum(is.na(.))))
 
 # Anzeigen des Ergebnisses
 #print(missing_values_combined)
@@ -304,9 +304,9 @@ validation_data <- combined_data %>%
 
 #Ohne Wettercode, da es Probleme mit den Stufen gibt
 
-baseline_model <- lm(Umsatz ~ Warengruppe + KielerWoche  
-                       + IsFerien + IsFeiertag + 
-                       Wochentag + Temperatur_Imputated + Bewoelkung_Imputated + 
+baseline_model <- lm(Umsatz ~ Warengruppe + KielerWoche
+                     + IsFerien + IsFeiertag +
+                       Wochentag + Temperatur_Imputated + Bewoelkung_Imputated +
                        Windgeschwindigkeit_Imputated + Regen , data = train_data)
 
 summary(baseline_model)
@@ -339,9 +339,9 @@ mape <- mean(abs((validation_data$Umsatz - validation_predictions) / validation_
 
 
 #Erstellen der Dummy-Variablen und HinzufÃ¼gen der numerischen Variablen
-features_matrix_train <- model.matrix(~Warengruppe + KielerWoche  
-                                      + IsFerien + IsFeiertag + 
-                                        Wochentag + Temperatur_Imputated + Bewoelkung_Imputated + 
+features_matrix_train <- model.matrix(~Warengruppe + KielerWoche
+                                      + IsFerien + IsFeiertag +
+                                        Wochentag + Temperatur_Imputated + Bewoelkung_Imputated +
                                         Windgeschwindigkeit_Imputated + Regen, data=train_data)
 
 #Umwandlung in ein tibble
@@ -350,23 +350,23 @@ features_train <- as_tibble(features_matrix_train)
 
 
 #Erstellen der Dummy-Variablen und HinzufÃ¼gen der numerischen Variablen
-features_matrix_validation <- model.matrix(~ Warengruppe + KielerWoche  
-                                           + IsFerien + IsFeiertag + 
-                                             Wochentag + Temperatur_Imputated + Bewoelkung_Imputated + 
+features_matrix_validation <- model.matrix(~ Warengruppe + KielerWoche
+                                           + IsFerien + IsFeiertag +
+                                             Wochentag + Temperatur_Imputated + Bewoelkung_Imputated +
                                              Windgeschwindigkeit_Imputated + Regen, data=validation_data)
 
 #Umwandlung in ein tibble
 features_validation <- as_tibble(features_matrix_validation)
 
 
-#label für train_data
+#label f?r train_data
 label_train <- train_data %>%
   select(Umsatz) %>%
   rename(label = Umsatz) %>%
   as_tibble()
 
 
-#label für validation_data
+#label f?r validation_data
 label_validation <- validation_data %>%
   select(Umsatz) %>%
   rename(label = Umsatz) %>%
@@ -424,25 +424,25 @@ test_data <- test_data %>%
 
 #Darstellung der Missing Values
 
-###### KNN für Temperatur ########
+###### KNN f?r Temperatur ########
 
-# Funktion für KNN-basierte Imputation
+# Funktion f?r KNN-basierte Imputation
 impute_knn <- function(data, column_name) {
-  # Neue Spalte für die imputierten Werte erstellen
+  # Neue Spalte f?r die imputierten Werte erstellen
   data[[paste0(column_name, "_Imputated")]] <- data[[column_name]]
-  
+
   for (i in 1:nrow(data)) {
     if (is.na(data[[paste0(column_name, "_Imputated")]][i])) {
-      # Bereiche für vorherige und nachfolgende Werte definieren
+      # Bereiche f?r vorherige und nachfolgende Werte definieren
       range_start <- max(1, i - 5)
       range_end <- min(nrow(data), i + 5)
-      
+
       # Werte vor und nach dem NA-Wert extrahieren
       values <- data[[paste0(column_name, "_Imputated")]][range_start:range_end]
-      
-      # NA-Werte aus diesen Werten ausschließen
+
+      # NA-Werte aus diesen Werten ausschlie?en
       values <- values[!is.na(values)]
-      
+
       # Wenn es ausreichend viele Nicht-NA-Werte gibt, ersetzen
       if (length(values) > 0) {
         data[[paste0(column_name, "_Imputated")]][i] <- mean(values, na.rm = TRUE)
@@ -459,18 +459,18 @@ test_data <- impute_knn(test_data, "Temperatur")
 ##### Imputation Bewoelkung #####
 
 impute_with_previous <- function(data, column_name) {
-  # Neue Spalte für imputierte Werte erstellen
+  # Neue Spalte f?r imputierte Werte erstellen
   data[[paste0(column_name, "_Imputated")]] <- data[[column_name]]
-  
-  # Iterieren über alle Zeilen, beginnend mit der zweiten Zeile
+
+  # Iterieren ?ber alle Zeilen, beginnend mit der zweiten Zeile
   for (i in 2:nrow(data)) {
-    # Überprüfen, ob der aktuelle Wert NA ist
+    # ?berpr?fen, ob der aktuelle Wert NA ist
     if (is.na(data[[paste0(column_name, "_Imputated")]][i])) {
       # Ersetzen des NA-Wertes mit dem Wert der vorherigen Zeile
       data[[paste0(column_name, "_Imputated")]][i] <- data[[paste0(column_name, "_Imputated")]][i-1]
     }
   }
-  
+
   return(data)
 }
 
@@ -485,7 +485,7 @@ test_data <- impute_with_previous(test_data, "Windgeschwindigkeit")
 # Anwenden der Funktion auf die Spalte "Wettercode" im Datensatz
 test_data <- impute_with_previous(test_data, "Wettercode")
 
-#Regen-Variable hinzufügen
+#Regen-Variable hinzuf?gen
 test_data <- test_data %>%
   mutate(Regen = sapply(Wettercode_Imputated, funktion_regen))
 
@@ -504,9 +504,9 @@ test_data <- test_data %>%
 
 
 #Erstellen der Dummy-Variablen und HinzufÃ¼gen der numerischen Variablen
-features_matrix_test <- model.matrix(~ Warengruppe + KielerWoche  
-                                     + IsFerien + IsFeiertag + 
-                                       Wochentag + Temperatur_Imputated + Bewoelkung_Imputated + 
+features_matrix_test <- model.matrix(~ Warengruppe + KielerWoche
+                                     + IsFerien + IsFeiertag +
+                                       Wochentag + Temperatur_Imputated + Bewoelkung_Imputated +
                                        Windgeschwindigkeit_Imputated + Regen, data=test_data)
 
 
@@ -531,29 +531,4 @@ write.csv(features_test, "features_test_regen.csv", row.names = FALSE)
 #Exportieren von test_data_combined fÃ¼r die IDs
 write.csv(test_data, "test_data_IDs_regen.csv", row.names = FALSE)
 
-getwd()
 
-
-# Mape für einzelne Warengruppen
-
-validation_predictions <- read_csv("validation_predictions.csv")
-
-print(validation_predictions)
-
-validation_data$Prediction <- validation_predictions$Prediction
-
-print(validation_data)
-
-summary(validation_data)
-
-# Berechnung des MAPE
-calculate_mape <- function(actual, predicted) {
-  mean(abs((actual - predicted) / actual) * 100, na.rm = TRUE)
-}
-
-# Anwendung des MAPE auf jedes Produkt
-mape_per_product <- validation_data %>%
-  group_by(Produktname) %>%
-  summarise(MAPE = calculate_mape(Umsatz, Prediction))
-
-print(mape_per_product)
