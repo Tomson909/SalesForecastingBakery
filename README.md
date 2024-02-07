@@ -29,6 +29,6 @@ Regression
 1.  [**Data Import and Preparation**](1_DatasetCharacteristics/final_script.r)
 3.  [**Dataset Characteristics (Barcharts)**](1_DatasetCharacteristics/final_script.r)
 4.  [**Baseline Model**](1_DatasetCharacteristics/final_script.r)
-5.  [**Model Definition and Evaluation**](3_Model/best_model.ipynb) #best model as notebook in this folder
+5.  [**Model Definition and Evaluation**](3_Model/best_model.ipynb) #our best model, which won first place in the Kaggle competition 
 6.  [**Presentation**](4_Presentation/Quarto_Präsi.qmd) #presentation as powerpoint in the folder as well
 
